@@ -1,0 +1,29 @@
+name: Build UDP controller plugin
+
+on: [workflow_dispatch]
+
+jobs:
+  build_udp:
+    runs-on: ubuntu-22.04
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+    - name: Download PSP SDK
+      run: |
+        curl -sL https://github.com/pspdev/pspdev/releases/download/v20240701/pspdev-ubuntu-latest-x86_64.tar.gz | tar xvz -C ./
+    - name: Set environment
+      run: |
+        echo "PSPDEV=${GITHUB_WORKSPACE}/pspdev" >> $GITHUB_ENV
+        echo "${GITHUB_WORKSPACE}/pspdev/bin" >> $GITHUB_PATH
+    - name: Install project kernel SDK files
+      run: |
+        cp procfw_sdk_prebuilt/include/* pspdev/psp/sdk/include/
+        cp procfw_sdk_prebuilt/lib/* pspdev/psp/sdk/lib/
+    - name: Build
+      run: make
+    - name: Upload PRX
+      uses: actions/upload-artifact@v4
+      with:
+        name: GTRemasteredUDP
+        path: GTRemasteredUDP.prx
+        if-no-files-found: error
