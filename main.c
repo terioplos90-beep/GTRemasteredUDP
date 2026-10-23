@@ -62,7 +62,10 @@ static int camera_controls = 0;
 static int adjacent_axes = 0;
 
 // UDP steering input for PPSSPP.
-// Redmi sender sends: angle,steering
+// Accepts either:
+//   steering
+// or:
+//   angle,steering
 #define UDP_STEERING_PORT 5557
 #define UDP_BUF_SIZE 128
 #define UDP_TIMEOUT_FRAMES 20
@@ -77,17 +80,17 @@ int _atoi(char *buf);
 
 static int parse_udp_steering(char *buf){
 	char *comma = strchr(buf, ',');
-	if(comma == NULL){
-		return 0;
-	}
-	comma++;
-	int value = _atoi(comma);
+	char *value_text = (comma != NULL) ? comma + 1 : buf;
+
+	int value = _atoi(value_text);
+
 	if(value < -67){
 		value = -67;
 	}
 	if(value > 67){
 		value = 67;
 	}
+
 	// Sender range is approximately -67..+67 degrees.
 	// Plugin steering range is -127..+127.
 	return value * 127 / 67;
@@ -325,8 +328,6 @@ void digital_to_analog_patched(u32 *param_1, u32 *param_2){
 	float *brake = (float *)((u32)(param_1[2]) + 0x538);
 	u32 *brake_as_int = (u32 *)brake;
 
-	//LOG("accel at 0x%lx is %f, brake at 0x%lx is %f", (u32)accel, *accel, (u32)brake, *brake);
-
 	digital_to_analog_orig(param_1, param_2);
 	if(*accel_as_int != 0 && override_accel){
 		*accel = (float)accel_override / 127.0f;
@@ -363,20 +364,11 @@ void populate_car_digital_control_patched(unsigned char *param_1, u32 param_2, u
 // this is naturally invoked when button bound for steering is not pressed, so likely invoked for converting analog stick value to steering
 static void (*populate_car_analog_control_orig)(u32 param_1, int *param_2, unsigned char *param_3, u32 param_4, u32 param_5, unsigned char param_6);
 void populate_car_analog_control_patched(u32 param_1, int *param_2, unsigned char *param_3, u32 param_4, u32 param_5, unsigned char param_6){
-	short *steering = (short *)(&param_3[4]); // +- 0x2000 int
-	float *camera_rotation = (float *)(&param_3[0x2c]); // +-1.0 float
+	short *steering = (short *)(&param_3[4]);
+	float *camera_rotation = (float *)(&param_3[0x2c]);
 	short *throttle = (short *)(&param_3[0x8]);
 	short *brake = (short *)(&param_3[0xA]);
-	// an analog handbrake
-	//short *handbrake = (short *)(&param_3[0xe]);
-	//param_3[0] = param_3[0] | 0x10;
-	// analog reverse, also has the weird response curve
-	//short *reverse = (short *)(&param_3[0xc]);
-	//param_3[0] = param_3[0] | 8;
 
-	// no clutch..?
-
-	// populate_car_analog_control_orig(param_1, param_2, param_3, param_4, param_5, param_6);
 	param_3[0] = 0;
 	param_3[1] = 0;
 
@@ -391,7 +383,6 @@ void populate_car_analog_control_patched(u32 param_1, int *param_2, unsigned cha
 	int mode;
 	sceCtrlGetSamplingMode(&mode);
 	if(mode != PSP_CTRL_MODE_ANALOG){
-		// the mode might be per thread
 		LOG_VERBOSE("sceCtrlGetSamplingMode is not analog..? setting it to analog now");
 		sceCtrlSetSamplingMode(PSP_CTRL_MODE_ANALOG);
 		return;
@@ -430,7 +421,6 @@ void populate_car_analog_control_patched(u32 param_1, int *param_2, unsigned cha
 	}
 
 	if(override_accel){
-		// weird curve, 0-0.71 is roughly nothing, 0.81 is roughly 0.25 throttle, 0.91 is roughly 0.5 throttle, 0.96 is roughly 0.75 throttle
 		param_3[0] = param_3[0] | 2;
 		if(accel_override >= 95){
 			static short base = (0x1000 * 0.96f);
@@ -460,7 +450,6 @@ void populate_car_analog_control_patched(u32 param_1, int *param_2, unsigned cha
 			static int range = 31;
 			*throttle = base + throttle_segment * offset_throttle / range;
 		}
-		// *throttle = accel_override * 0x1000 / 127;
 		LOG_VERBOSE("applying accel override, val is %d, throttle is %d", accel_override, *throttle);
 	}
 
@@ -504,236 +493,8 @@ int _atoi(char *buf){
 }
 
 void parse_config(){
-    char *path = "ms0:/PSP/"MODULE_NAME"_settings.txt";
+	char *path = "ms0:/PSP/"MODULE_NAME"_settings.txt";
 	int fd = sceIoOpen(path, PSP_O_RDONLY, 0);
 	if(fd < 0){
 		LOG("cannot open %s for reading, trying ef0:/", path);
-		path = "ef0:/PSP/"MODULE_NAME"_settings.txt";
-		fd = sceIoOpen(path, PSP_O_RDONLY, 0);
-		if(fd < 0){
-			LOG("cannot open %s for reading either", path);
-			return;
-    	}
-	}
-
-	char buf[128] = {0};
-	u32 len = sceIoRead(fd, buf, sizeof(buf));
-	if(len < 0){
-		LOG("failed reading %s after opening", path);
-		return;
-	}
-
-	int arg_idx = 0;
-	char arg_buf[128] = {0};
-	u32 arg_buf_write_head = 0;
-	for(u32 i = 0;i <= len; i++){
-		if(i < len && buf[i] != ' ' && buf[i] != '\n'){
-			arg_buf[arg_buf_write_head] = buf[i];
-			arg_buf_write_head++;
-		}else{
-		    if(arg_buf_write_head == 0){
-		        continue;
-		    }
-			arg_buf[arg_buf_write_head] = '\0';
-			if(arg_idx == 0){
-				int num = _atoi(arg_buf);
-				camera_controls = num && is_emulator;
-				if(camera_controls){
-				    LOG("enabling camera controls");
-				}else{
-				    LOG("not enabling camera controls");
-				}
-			}else if(arg_idx == 1){
-				int num = _atoi(arg_buf);
-				if(num > 127){
-					num = 127;
-				}
-				if(num < 0){
-					num = 0;
-				}
-				LOG("overriding inner deadzone %d with %d", inner_deadzone, num);
-				inner_deadzone = num;
-			}else if(arg_idx == 2){
-				int num = _atoi(arg_buf);
-				if(num > 127){
-					num = 127;
-				}
-				if(num < 0){
-					num = 0;
-				}
-				LOG("overriding outer deadzone %d with %d", outer_deadzone, num);
-				outer_deadzone = num;
-			}
-
-			arg_buf_write_head = 0;
-			arg_idx++;
-		}
-	}
-}
-
-int init(){
-	char disc_id[50];
-	char disc_version[50];
-	int disc_id_valid = get_disc_id_version(disc_id, disc_version) == 0;
-	if(disc_id_valid){
-		LOG("disc id is %s", disc_id);
-		LOG("disc version is %s", disc_version);
-	}else{
-		LOG("cannot find disc id from sfo, aborting");
-		return -1;
-	}
-
-	if(set_offsets(disc_id, disc_version) != 0){
-		LOG("cannot lookup function offsets with disc id and version, aborting");
-		return -1;
-	}
-
-	if(is_emulator){
-		adjacent_axes = 1;
-		outer_deadzone = 124;
-		inner_deadzone = 3;
-	}
-	parse_config();
-
-	//HIJACK_FUNCTION(offset_digital_to_analog, digital_to_analog_patched, digital_to_analog_orig);
-	//HIJACK_FUNCTION(offset_populate_car_digital_control, populate_car_digital_control_patched, populate_car_digital_control_orig);
-	HIJACK_FUNCTION(offset_populate_car_analog_control, populate_car_analog_control_patched, populate_car_analog_control_orig);
-
-	#if 0
-	if(!is_emulator){
-		HIJACK_SYSCALL_STUB((u32)sceCtrlReadBufferPositive, sceCtrlReadBufferPositivePatched, sceCtrlReadBufferPositiveOrig);
-	}
-	#endif
-
-	if(is_emulator){
-		sceKernelDelayThread(1000 * 1000 * 5);
-		LOG("boosting input sampling on ppsspp");
-		sceCtrlSetSamplingCycle(5555);
-	}
-
-	LOG("main thread finishes");
-	return 0;
-}
-
-#ifndef IRSHELL
-int StartPSP(SceModule2 *mod) {
-	char namebuf[sizeof(mod->modname) + 1] = {0};
-	memcpy(namebuf, mod->modname, sizeof(mod->modname));
-	LOG("PSP module %s", namebuf);
-	if(strcmp(namebuf, GAME_MODULE_NAME) == 0){
-		game_base_addr = mod->text_addr;
-		// XXX oh no
-		game_base_addr = game_base_addr + 0x28;
-		LOG("GTPSP module %s found, setting base address to 0x%08lx", namebuf, game_base_addr);
-		init();
-	}
-
-	if (!previous){
-		return 0;
-	}
-
-	return previous(mod);
-}
-#else
-int irshell_find_module(SceSize args, void *argp){
-	int cycles = 0;
-	while(cycles < 60){
-		SceUID modules[256] = {0};
-		SceKernelModuleInfo info = {0};
-		int count = 0;
-		LOG("%s: scanning through module list", __func__);
-		if(sceKernelGetModuleIdList(modules, sizeof(modules), &count) >= 0){
-			for(int i = 0;i < count;i++){
-				info.size = sizeof(SceKernelModuleInfo);
-				if(sceKernelQueryModuleInfo(modules[i], &info) < 0){
-					LOG("failed fetching module info for id 0x%08x", modules[i]);
-					continue;
-				}
-				char namebuf[sizeof(info.name) + 1] = {0};
-				memcpy(namebuf, info.name, sizeof(info.name));
-				if(strcmp(namebuf, GAME_MODULE_NAME) == 0){
-					LOG("GTPSP module %s found with text_addr 0x%08x", namebuf, info.text_addr);
-					// XXX I guess ppsspp's value is off
-					game_base_addr = info.text_addr + 0x28;
-				}else{
-					LOG("ignoring module %s", namebuf);
-				}
-			}
-			if(game_base_addr != 0){
-				init();
-				sceKernelExitDeleteThread(0);
-				return 0;
-			}
-		}else{
-			LOG("failed fetching module id list");
-		}
-		LOG("%s: didn't find GTPSP module, trying again in a second", __func__);
-		sceKernelDelayThread(1000 * 1000);
-		cycles++;
-	}
-	LOG("%s: giving up, it has been a whole minute", __func__);
-	sceKernelExitDeleteThread(0);
-	return 0;
-}
-#endif
-
-static void StartPPSSPP() {
-	SceUID modules[256];
-	SceKernelModuleInfo info;
-	int i, count = 0;
-
-	if (sceKernelGetModuleIdList(modules, sizeof(modules), &count) >= 0) {
-		for (i = 0; i < count; ++i) {
-			info.size = sizeof(SceKernelModuleInfo);
-			if (sceKernelQueryModuleInfo(modules[i], &info) < 0) {
-				continue;
-			}
-			char namebuf[sizeof(info.name) + 1] = {0};
-			memcpy(namebuf, info.name, sizeof(info.name));
-			LOG("PPSSPP module %s", namebuf);
-			if(strcmp(namebuf, GAME_MODULE_NAME) == 0){
-				LOG("GTPSP module %s found", namebuf);
-				game_base_addr = info.text_addr;
-			}
-		}
-		if(game_base_addr != 0){
-			init();
-		}
-	}
-}
-
-int module_start(SceSize args, void *argp){
-	#if DEBUG_LOG
-	sceIoRemove("ms0:/PSP/"MODULE_NAME".log");
-	sceIoRemove("ef0:/PSP/"MODULE_NAME".log");
-	#endif
-	LOG("module started");
-
-	is_emulator = sceIoDevctl("kemulator:", EMULATOR_DEVCTL__IS_EMULATOR, NULL, 0, NULL, 0) == 0;
-
-	if (is_emulator) {
-		// Just scan the modules using normal/official syscalls.
-		LOG("starting in ppsspp mode");
-		start_udp_steering();
-		StartPPSSPP();
-	}else{
-		#ifndef IRSHELL
-		LOG("starting in psp hen mode");
-		previous = sctrlHENSetStartModuleHandler(StartPSP);
-		#else
-		LOG("starting in psp irshell mode");
-		SceUID thid = sceKernelCreateThread("irshell_find_module", irshell_find_module, 0x18, 0x10000, 0, NULL);
-		if(thid < 0){
-			LOG("failed creating irshell module searching thread");
-			return 0;
-		}
-		sceKernelStartThread(thid, 0, NULL);
-		#endif
-	}
-	return 0;
-}
-
-int module_stop(SceSize args, void *argp){
-	LOG("attempting to stop this module, but unload is not really implemented...");
-	return 0;
-}
+		path = "ef
