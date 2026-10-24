@@ -125,14 +125,25 @@ while(1){
 	int len = sceNetInetRecvfrom(udp_socket, buf, UDP_BUF_SIZE - 1, 0,  
 		(struct sockaddr *)&addr, (socklen_t *)&fromlen);  
 	if(len > 0){  
-		if(len >= UDP_BUF_SIZE){  
-			len = UDP_BUF_SIZE - 1;  
-		}  
-		buf[len] = '\0';  
-		udp_steering_value = parse_udp_steering(buf);  
-		udp_packet_valid = 1;  
-		udp_packet_age = 0;  
-	}  
+		if(len > 0){
+    static int packet_log_count = 0;
+
+    if(len >= UDP_BUF_SIZE){
+        len = UDP_BUF_SIZE - 1;
+    }
+
+    buf[len] = '\0';
+
+    udp_steering_value = parse_udp_steering(buf);
+    udp_packet_valid = 1;
+    udp_packet_age = 0;
+
+    if(packet_log_count < 10){
+        LOG("UDP PACKET RECEIVED: %s", buf);
+        LOG("UDP STEERING VALUE: %d", udp_steering_value);
+        packet_log_count++;
+    }
+		} 
 }  
 
 return 0;
