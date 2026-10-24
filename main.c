@@ -91,7 +91,7 @@ static int parse_udp_steering(char *buf){
 }
 
 static int udp_steering_thread(SceSize args, void *argp){
-LOG("UDP THREAD ENTERED");
+ LOG("UDP THREAD ENTERED");
 struct sockaddr_in addr;
 char buf[UDP_BUF_SIZE];
 
