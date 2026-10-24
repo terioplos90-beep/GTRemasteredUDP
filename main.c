@@ -1,4 +1,4 @@
-bbug/*
+/*
 Remastered Controls: RemasteredControls_GTpsp
 Copyright (C) 2018, TheFloW
 Copyright (C) 2023, Katharine Chui
@@ -96,7 +96,7 @@ struct sockaddr_in addr;
 char buf[UDP_BUF_SIZE];
 
 udp_socket = sceNetInetSocket(AF_INET, SOCK_DGRAM, 0);  
-if(udp_socket < 0){  
+if(udp_socket < 0){
 	LOG("UDP socket failed: %d", udp_socket);  
 	udp_thread_id = -1;  
 	sceKernelExitDeleteThread(0);  
