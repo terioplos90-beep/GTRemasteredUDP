@@ -152,6 +152,7 @@ if(udp_thread_id < 0){
 	LOG("UDP thread create failed: %d", udp_thread_id);  
 	return;  
 }  
+LOG("UDP THREAD CREATED: %d", udp_thread_id);
 int res = sceKernelStartThread(udp_thread_id, 0, NULL);  
 if(res < 0){  
 	LOG("UDP thread start failed: %d", res);  
