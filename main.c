@@ -76,18 +76,52 @@ static int udp_socket = -1;
 int _atoi(char *buf);
 
 static int parse_udp_steering(char *buf){
-	char *comma = strchr(buf, ',');
-	char *value_text = (comma != NULL) ? comma + 1 : buf;
-	int value = _atoi(value_text);
+    char *comma = strchr(buf, ',');
+    char *value_text = (comma != NULL) ? comma + 1 : buf;
 
-	if(value < -67){
-		value = -67;
-	}
-	if(value > 67){
-		value = 67;
-	}
+    float value = 0.0f;
+    int sign = 1;
 
-	return value * 127 / 67;
+    if(*value_text == '-'){
+        sign = -1;
+        value_text++;
+    }
+
+    int whole = 0;
+    int decimal = 0;
+    int decimal_div = 1;
+    int after_decimal = 0;
+
+    while(*value_text >= '0' && *value_text <= '9'){
+        whole = whole * 10 + (*value_text - '0');
+        value_text++;
+    }
+
+    if(*value_text == '.'){
+        value_text++;
+
+        while(*value_text >= '0' && *value_text <= '9'){
+            if(after_decimal < 3){
+                decimal = decimal * 10 + (*value_text - '0');
+                decimal_div *= 10;
+                after_decimal++;
+            }
+            value_text++;
+        }
+    }
+
+    value = (float)whole + ((float)decimal / (float)decimal_div);
+    value *= (float)sign;
+
+    if(value < -67.0f){
+        value = -67.0f;
+    }
+
+    if(value > 67.0f){
+        value = 67.0f;
+    }
+
+    return (int)(value * 127.0f / 67.0f);
 }
 
 static int udp_steering_thread(SceSize args, void *argp){
