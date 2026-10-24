@@ -123,8 +123,7 @@ LOG("UDP steering listening on port %d", UDP_STEERING_PORT);
 while(1){  
 	int fromlen = sizeof(addr);  
 	int len = sceNetInetRecvfrom(udp_socket, buf, UDP_BUF_SIZE - 1, 0,  
-		(struct sockaddr *)&addr, (socklen_t *)&fromlen);  
-	if(len > 0){  
+		(struct sockaddr *)&addr, (socklen_t *)&fromlen);    
 		if(len > 0){
     static int packet_log_count = 0;
 
@@ -142,7 +141,7 @@ while(1){
         LOG("UDP PACKET RECEIVED: %s", buf);
         LOG("UDP STEERING VALUE: %d", udp_steering_value);
         packet_log_count++;
-    }
+    
 		} 
 }  
 
