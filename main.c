@@ -145,6 +145,7 @@ int net_res = sceNetInit(128 * 1024, 0x20, 0x1000, 0x20, 0x1000);
 LOG("sceNetInit result: %d", net_res);
 int inet_res = sceNetInetInit();
 LOG("sceNetInetInit result: %d", inet_res);
+LOG("BEFORE UDP THREAD CREATE");
 
 udp_thread_id = sceKernelCreateThread("GTRemasteredUDP", udp_steering_thread, 0x18, 0x4000, 0, NULL);  
 if(udp_thread_id < 0){  
