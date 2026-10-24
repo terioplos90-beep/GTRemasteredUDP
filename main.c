@@ -142,7 +142,7 @@ while(1){
         LOG("UDP STEERING VALUE: %d", udp_steering_value);
         packet_log_count++;
     
-		} 
+	}		} 
 }  
 
 return 0;
