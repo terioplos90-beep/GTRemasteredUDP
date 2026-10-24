@@ -140,26 +140,62 @@ return 0;
 }
 
 static void start_udp_steering(void){
-// This experiment targets PPSSPP only. The network libraries are initialized
-// here and are deliberately not terminated, because PPSSPP may use them too.
-int net_res = sceNetInit(128 * 1024, 0x20, 0x1000, 0x20, 0x1000);
-LOG("sceNetInit result: %d", net_res);
-int inet_res = sceNetInetInit();
-LOG("sceNetInetInit result: %d", inet_res);
-LOG("BEFORE UDP THREAD CREATE");
+    int net_res = sceNetInit(
+        128 * 1024, 0x20, 0x1000, 0x20, 0x1000
+    );
+    LOG("sceNetInit result: %d", net_res);
 
-udp_thread_id = sceKernelCreateThread("GTRemasteredUDP", udp_steering_thread, 0x18, 0x4000, 0, NULL);  
-if(udp_thread_id < 0){  
-	LOG("UDP thread create failed: %d", udp_thread_id);  
-	return;  
-}  
-LOG("UDP THREAD CREATED: %d", udp_thread_id);
-int res = sceKernelStartThread(udp_thread_id, 0, NULL);
-	LOG("UDP THREAD START RESULT: %d", res);  
-if(res < 0){  
-	LOG("UDP thread start failed: %d", res);  
-}
+    int inet_res = sceNetInetInit();
+    LOG("sceNetInetInit result: %d", inet_res);
 
+    LOG("BEFORE UDP THREAD CREATE");
+
+    udp_thread_id = sceKernelCreateThread(
+        "GTRemasteredUDP",
+        udp_steering_thread,
+        0x18,
+        0x4000,
+        0,
+        NULL
+    );
+
+    if(udp_thread_id < 0){
+        LOG("UDP thread create failed: %d", udp_thread_id);
+        return;
+    }
+
+    LOG("UDP THREAD CREATED: %d", udp_thread_id);
+
+    int start_res = sceKernelStartThread(
+        udp_thread_id, 0, NULL
+    );
+
+    LOG("UDP THREAD START RESULT: %d", start_res);
+
+    if(start_res < 0){
+        LOG("UDP thread start failed: %d", start_res);
+        return;
+    }
+
+    sceKernelDelayThread(10000);
+
+    SceKernelThreadInfo ti;
+    memset(&ti, 0, sizeof(ti));
+    ti.size = sizeof(ti);
+
+    int status_res = sceKernelReferThreadStatus(
+        udp_thread_id, &ti
+    );
+
+    LOG("THREAD STATUS RESULT: %d", status_res);
+
+    if(status_res >= 0){
+        LOG("THREAD STATUS: %d", ti.status);
+        LOG("THREAD PRIORITY: %d", ti.currentPriority);
+        LOG("THREAD EXIT STATUS: %d", ti.exitStatus);
+    }
+
+    LOG("UDP THREAD DIAGNOSTIC FINISHED");
 }
 
 static int apply_deadzone(int val){
