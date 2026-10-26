@@ -369,8 +369,10 @@ int sceCtrlReadBufferPositivePatched(SceCtrlData *pad_data, int count){
 int k1 = pspSdkSetK1(0);
 int res = sceCtrlReadBufferPositiveOrig(pad_data, count);
 
-sample_input(pad_data, res, 0);  
-
+sample_input(pad_data, res, 0);
+	
+pad_data[0].Buttons |= 0x4000;
+	
 pspSdkSetK1(k1);  
 return res;
 
