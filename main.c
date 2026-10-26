@@ -488,15 +488,9 @@ if(mode != PSP_CTRL_MODE_ANALOG){
 }  
 
 if(is_emulator) {
-    HIJACK_SYSCALL_STUB(
-        (u32)sceCtrlReadBufferPositive,
-        sceCtrlReadBufferPositivePatched,
-        sceCtrlReadBufferPositiveOrig
-    );
-	
-	SceCtrlData pad_data;  
-	int res = sceCtrlPeekBufferPositive(&pad_data, 1);  
-	sample_input(&pad_data, res, 0);  
+    SceCtrlData pad_data;
+    int res = sceCtrlPeekBufferPositive(&pad_data, 1);
+    sample_input(&pad_data, res, 0);
 }  
 
 // UDP steering takes priority while packets are arriving.  
