@@ -485,17 +485,13 @@ if(mode != PSP_CTRL_MODE_ANALOG){
 	return;  
 }  
 
-#if 0
-if(!is_emulator){
+if(is_emulator) {
     HIJACK_SYSCALL_STUB(
         (u32)sceCtrlReadBufferPositive,
         sceCtrlReadBufferPositivePatched,
         sceCtrlReadBufferPositiveOrig
     );
-}
-#endif
-{  
-#endif  
+}  
 	SceCtrlData pad_data;  
 	int res = sceCtrlPeekBufferPositive(&pad_data, 1);  
 	sample_input(&pad_data, res, 0);  
