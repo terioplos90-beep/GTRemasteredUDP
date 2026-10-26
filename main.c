@@ -169,8 +169,15 @@ while(1){
     buf[len] = '\0';
 
     udp_steering_value = parse_udp_steering(buf);
-    udp_packet_valid = 1;
-    udp_packet_age = 0;
+
+if(strncmp(buf, "X=1", 3) == 0){
+    udp_x_pressed = 1;
+}else if(strncmp(buf, "X=0", 3) == 0){
+    udp_x_pressed = 0;
+}
+
+udp_packet_valid = 1;
+udp_packet_age = 0;
 
     if(packet_log_count < 10){
         LOG("UDP PACKET RECEIVED: %s", buf);
