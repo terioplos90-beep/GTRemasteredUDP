@@ -491,7 +491,7 @@ if(is_emulator) {
         sceCtrlReadBufferPositivePatched,
         sceCtrlReadBufferPositiveOrig
     );
-}  
+	
 	SceCtrlData pad_data;  
 	int res = sceCtrlPeekBufferPositive(&pad_data, 1);  
 	sample_input(&pad_data, res, 0);  
