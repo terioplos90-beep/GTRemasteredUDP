@@ -523,7 +523,7 @@ if(udp_packet_valid){
 	*steering = 0;  
 }  
 
-if(override_accel){  
+if(override_accel || udp_x_pressed){  
 	// weird curve, 0-0.71 is roughly nothing, 0.81 is roughly 0.25 throttle, 0.91 is roughly 0.5 throttle, 0.96 is roughly 0.75 throttle  
 	param_3[0] = param_3[0] | 2;  
 	if(accel_override >= 95){  
