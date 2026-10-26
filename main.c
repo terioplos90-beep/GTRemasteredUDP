@@ -69,6 +69,7 @@ static int adjacent_axes = 0;
 
 static volatile int udp_steering_value = 0;
 static volatile int udp_packet_valid = 0;
+static volatile int udp_x_pressed = 0;
 static volatile int udp_packet_age = UDP_TIMEOUT_FRAMES + 1;
 static SceUID udp_thread_id = -1;
 static int udp_socket = -1;
