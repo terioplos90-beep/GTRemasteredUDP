@@ -30,7 +30,7 @@ jobs:
         make CFLAGS_EXTRA=-DIRSHELL=1
 
     - name: Push package artifact
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: GTRemastered_IRSHELL_${{ env.sha_name }}
         path: |
