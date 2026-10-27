@@ -70,6 +70,7 @@ static int adjacent_axes = 0;
 static volatile int udp_steering_value = 0;
 static volatile int udp_packet_valid = 0;
 static volatile int udp_x_pressed = 0;
+static volatile int udp_square_pressed = 0;
 static volatile int udp_packet_age = UDP_TIMEOUT_FRAMES + 1;
 static SceUID udp_thread_id = -1;
 static int udp_socket = -1;
@@ -174,6 +175,12 @@ if(strncmp(buf, "X=1", 3) == 0){
     udp_x_pressed = 1;
 }else if(strncmp(buf, "X=0", 3) == 0){
     udp_x_pressed = 0;
+}
+			
+if(strncmp(buf, "SQUARE=1", 8) == 0){
+    udp_square_pressed = 1;
+}else if(strncmp(buf, "SQUARE=0", 8) == 0){
+    udp_square_pressed = 0;
 }
 
 udp_packet_valid = 1;
