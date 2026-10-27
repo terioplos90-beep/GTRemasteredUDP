@@ -525,8 +525,10 @@ if(udp_packet_valid){
 
 if(override_accel || udp_x_pressed){  
 	// weird curve, 0-0.71 is roughly nothing, 0.81 is roughly 0.25 throttle, 0.91 is roughly 0.5 throttle, 0.96 is roughly 0.75 throttle  
-	param_3[0] = param_3[0] | 2;  
-	if(accel_override >= 95){  
+	param_3[0] = param_3[0] | 2;
+if(udp_x_pressed){
+    *throttle = 4096;
+}else if(accel_override >= 95){  
 		static short base = (0x1000 * 0.96f);  
 		static short offset_throttle = (0x1000 * (1.0f - 0.96f) + 1);  
 		int throttle_segment = accel_override - 95;  
