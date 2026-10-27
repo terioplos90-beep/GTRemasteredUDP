@@ -766,7 +766,7 @@ return 0;
 }else{
 LOG("failed fetching module id list");
 }
-LOG("%s: didn't find GTPSP module, trying again in a second", func);
+LOG("didn't find GTPSP module, trying again in a second");
 sceKernelDelayThread(1000 * 1000);
 cycles++;
 }
