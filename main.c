@@ -441,12 +441,11 @@ if(*brake_as_int != 0 && override_brake){
 }
 
 static void (*populate_car_digital_control_orig)(unsigned char *param_1, u32 param_2, u32 param_3);
-void populate_car_digital_control_patched(unsigned char *param_1, u32 param_2, u32 param_3)
-{
+void populate_car_digital_control_patched(unsigned char *param_1, u32 param_2, u32 param_3){
 unsigned short int *accel_control = (unsigned short int *)&param_1[8];
 unsigned short int *brake_control = (unsigned short int *)&param_1[10];
 
-//populate_car_digital_control_orig(param_1, param_2, param_3);  
+populate_car_digital_control_orig(param_1, param_2, param_3);  
 
 if(override_accel){  
 	*accel_control = 1;  
@@ -526,14 +525,8 @@ if(udp_packet_valid){
 
 if(override_accel || udp_x_pressed){  
 	// weird curve, 0-0.71 is roughly nothing, 0.81 is roughly 0.25 throttle, 0.91 is roughly 0.5 throttle, 0.96 is roughly 0.75 throttle  
-	param_3[0] = param_3[0] | 2;
-	 
-	if(udp_x_pressed){
-    *throttle = 4096;
-
-}else{ 
-	
-if(accel_override >= 95){  
+	param_3[0] = param_3[0] | 2;  
+	if(accel_override >= 95){  
 		static short base = (0x1000 * 0.96f);  
 		static short offset_throttle = (0x1000 * (1.0f - 0.96f) + 1);  
 		int throttle_segment = accel_override - 95;  
@@ -570,8 +563,7 @@ if(override_brake){
 	*brake = brake_override * 0x1000 / 127;  
 	LOG_VERBOSE("applying brake override, val is %d, brake is %d", brake_override, *brake);  
 }  
-}
-	
+
 if(override_camera){  
 	*camera_rotation = camera_override;  
 }  
@@ -703,7 +695,7 @@ parse_config();
 //HIJACK_FUNCTION(offset_digital_to_analog, digital_to_analog_patched, digital_to_analog_orig);  
 //HIJACK_FUNCTION(offset_populate_car_digital_control, populate_car_digital_control_patched, populate_car_digital_control_orig);  
 HIJACK_FUNCTION(offset_populate_car_analog_control, populate_car_analog_control_patched, populate_car_analog_control_orig);  
-HIJACK_FUNCTION(offset_populate_car_digital_control, populate_car_digital_control_patched, populate_car_digital_control_orig);
+
 #if 0  
 if(!is_emulator){  
 	HIJACK_SYSCALL_STUB((u32)sceCtrlReadBufferPositive, sceCtrlReadBufferPositivePatched, sceCtrlReadBufferPositiveOrig);  
@@ -748,7 +740,7 @@ while(cycles < 60){
 SceUID modules[256] = {0};
 SceKernelModuleInfo info = {0};
 int count = 0;
-LOG("scanning through module list");
+LOG("%s: scanning through module list", func);
 if(sceKernelGetModuleIdList(modules, sizeof(modules), &count) >= 0){
 for(int i = 0;i < count;i++){
 info.size = sizeof(SceKernelModuleInfo);
@@ -774,11 +766,11 @@ return 0;
 }else{
 LOG("failed fetching module id list");
 }
-LOG("didn't find GTPSP module, trying again in a second");
+LOG("%s: didn't find GTPSP module, trying again in a second", func);
 sceKernelDelayThread(1000 * 1000);
 cycles++;
 }
-LOG("giving up, it has been a whole minute");
+LOG("%s: giving up, it has been a whole minute", func);
 sceKernelExitDeleteThread(0);
 return 0;
 }
