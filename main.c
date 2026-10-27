@@ -530,8 +530,10 @@ if(override_accel || udp_x_pressed){
 	 
 	if(udp_x_pressed){
     *throttle = 4096;
+
 }else{ 
-	if(accel_override >= 95){  
+	
+if(accel_override >= 95){  
 		static short base = (0x1000 * 0.96f);  
 		static short offset_throttle = (0x1000 * (1.0f - 0.96f) + 1);  
 		int throttle_segment = accel_override - 95;  
@@ -568,7 +570,8 @@ if(override_brake){
 	*brake = brake_override * 0x1000 / 127;  
 	LOG_VERBOSE("applying brake override, val is %d, brake is %d", brake_override, *brake);  
 }  
-
+}
+	
 if(override_camera){  
 	*camera_rotation = camera_override;  
 }  
