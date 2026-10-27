@@ -740,7 +740,7 @@ while(cycles < 60){
 SceUID modules[256] = {0};
 SceKernelModuleInfo info = {0};
 int count = 0;
-LOG("%s: scanning through module list");
+LOG("scanning through module list");
 if(sceKernelGetModuleIdList(modules, sizeof(modules), &count) >= 0){
 for(int i = 0;i < count;i++){
 info.size = sizeof(SceKernelModuleInfo);
