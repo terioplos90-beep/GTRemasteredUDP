@@ -441,7 +441,8 @@ if(*brake_as_int != 0 && override_brake){
 }
 
 static void (*populate_car_digital_control_orig)(unsigned char *param_1, u32 param_2, u32 param_3);
-void populate_car_digital_control_patched(unsigned char *param_1, u32 param_2, u32 param_3){
+void populate_car_digital_control_patched(unsigned char *param_1, u32 param_2, u32 param_3)
+{LOG("DIGITAL CONTROL HOOK CALLED");
 unsigned short int *accel_control = (unsigned short int *)&param_1[8];
 unsigned short int *brake_control = (unsigned short int *)&param_1[10];
 
