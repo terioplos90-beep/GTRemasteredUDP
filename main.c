@@ -446,7 +446,7 @@ void populate_car_digital_control_patched(unsigned char *param_1, u32 param_2, u
 unsigned short int *accel_control = (unsigned short int *)&param_1[8];
 unsigned short int *brake_control = (unsigned short int *)&param_1[10];
 
-populate_car_digital_control_orig(param_1, param_2, param_3);  
+//populate_car_digital_control_orig(param_1, param_2, param_3);  
 
 if(override_accel){  
 	*accel_control = 1;  
