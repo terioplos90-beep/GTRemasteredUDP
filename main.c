@@ -444,7 +444,10 @@ if(*brake_as_int != 0 && override_brake){
 		*brake = 1.0;  
 	}  
 }
-
+if(udp_square_pressed){
+    *brake = 1.0f;
+}
+	
 }
 
 static void (*populate_car_digital_control_orig)(unsigned char *param_1, u32 param_2, u32 param_3);
