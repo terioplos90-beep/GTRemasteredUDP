@@ -570,9 +570,9 @@ if(udp_x_pressed){
 	LOG_VERBOSE("applying accel override, val is %d, throttle is %d", accel_override, *throttle);  
 }  
 
-if(override_brake){  
+if(override_brake || udp_square_pressed){  
 	param_3[0] = param_3[0] | 4;  
-	*brake = brake_override * 0x1000 / 127;  
+	*brake = udp_square_pressed ? 4096 : brake_override * 0x1000 / 127;  
 	LOG_VERBOSE("applying brake override, val is %d, brake is %d", brake_override, *brake);  
 }  
 
