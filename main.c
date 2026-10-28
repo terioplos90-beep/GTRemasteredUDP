@@ -115,15 +115,15 @@ static int parse_udp_steering(char *buf){
     value = (float)whole + ((float)decimal / (float)decimal_div);
     value *= (float)sign;
 
-    if(value < -67.0f){
-        value = -67.0f;
+    if(value < -30.0f){
+        value = -30.0f;
     }
 
-    if(value > 67.0f){
-        value = 67.0f;
+    if(value > 30.0f){
+        value = 30.0f;
     }
 
-    return (int)(value * 127.0f / 67.0f);
+    return (int)(value * 127.0f / 30.0f);
 }
 
 static int udp_steering_thread(SceSize args, void *argp){
