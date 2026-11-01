@@ -456,7 +456,10 @@ unsigned short int *accel_control = (unsigned short int *)&param_1[8];
 unsigned short int *brake_control = (unsigned short int *)&param_1[10];
 
 populate_car_digital_control_orig(param_1, param_2, param_3);  
-
+if (udp_x_pressed) {
+    *accel_control = 1;
+    param_1[0] &= 0x9d;
+}
 if(override_accel){  
 	*accel_control = 1;  
 	param_1[0] &= 0x9d;  
