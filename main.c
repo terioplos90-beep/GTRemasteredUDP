@@ -484,7 +484,7 @@ short *brake = (short *)(&param_3[0xA]);
 
 // no clutch..?  
 
-// populate_car_analog_control_orig(param_1, param_2, param_3, param_4, param_5, param_6);  
+populate_car_analog_control_orig(param_1, param_2, param_3, param_4, param_5, param_6);  
 param_3[0] = 0;  
 param_3[1] = 0;  
 
