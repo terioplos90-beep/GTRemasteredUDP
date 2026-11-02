@@ -776,7 +776,7 @@ LOG("irshell_find_module: didn't find GTPSP module, trying again in a second");
 sceKernelDelayThread(1000 * 1000);
 cycles++;
 }
-LOG("%s: giving up, it has been a whole minute", func);
+LOG("giving up, it has been a whole minute");
 sceKernelExitDeleteThread(0);
 return 0;
 }
