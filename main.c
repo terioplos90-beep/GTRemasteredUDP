@@ -56,7 +56,7 @@ static int override_camera = 0;
 static float camera_override = 0;
 
 static unsigned char outer_deadzone = 114;
-static unsigned char inner_deadzone = 10;
+static unsigned char inner_deadzone = 02;
 
 static int camera_controls = 0;
 static int adjacent_axes = 0;
