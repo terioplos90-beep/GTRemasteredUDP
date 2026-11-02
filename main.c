@@ -486,9 +486,17 @@ void populate_car_digital_control_patched(unsigned char *param_1, u32 param_2, u
 
     populate_car_digital_control_orig(param_1, param_2, param_3);
 
-    if (override_accel) {
+    // Apply Redmi X to Gran Turismo's internal digital accelerator path.
+    if (override_accel || udp_x_pressed) {
         *accel_control = 1;
         param_1[0] &= 0x9d;
+        static int digital_x_logged = 0;
+        if (udp_x_pressed && !digital_x_logged) {
+            LOG("UDP X APPLIED TO GT DIGITAL ACCELERATOR");
+            digital_x_logged = 1;
+        } else if (!udp_x_pressed) {
+            digital_x_logged = 0;
+        }
     }
     if (override_brake) {
         *brake_control = 1;
@@ -745,7 +753,7 @@ int init() {
     parse_config();
 
     // HIJACK_FUNCTION(offset_digital_to_analog, digital_to_analog_patched, digital_to_analog_orig);
-    // HIJACK_FUNCTION(offset_populate_car_digital_control, populate_car_digital_control_patched, populate_car_digital_control_orig);
+    HIJACK_FUNCTION(offset_populate_car_digital_control, populate_car_digital_control_patched, populate_car_digital_control_orig);
     HIJACK_FUNCTION(offset_populate_car_analog_control, populate_car_analog_control_patched, populate_car_analog_control_orig);
 
     if (is_emulator) {
