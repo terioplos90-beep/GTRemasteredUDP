@@ -378,14 +378,47 @@ static void sample_input(SceCtrlData *pad_data, int count, int negative) {
 }
 
 static int (*sceCtrlReadBufferPositiveOrig)(SceCtrlData *pad_data, int count);
+static int (*sceCtrlPeekBufferPositiveOrig)(SceCtrlData *pad_data, int count);
+
+// Add the PSP digital Cross bit to every returned controller sample while
+// the Redmi sender is holding X. Do not convert X into analog throttle here.
+static void inject_udp_cross(SceCtrlData *pad_data, int count, int res) {
+    if (pad_data == NULL || count < 1 || res < 1 || !udp_x_pressed) {
+        return;
+    }
+
+    int samples = res;
+    if (samples > count) {
+        samples = count;
+    }
+
+    for (int i = 0; i < samples; i++) {
+        pad_data[i].Buttons |= PSP_CTRL_CROSS;
+    }
+
+    static int logged = 0;
+    if (!logged) {
+        LOG("UDP DIGITAL CROSS INJECTED");
+        logged = 1;
+    }
+}
 
 int sceCtrlReadBufferPositivePatched(SceCtrlData *pad_data, int count) {
     int k1 = pspSdkSetK1(0);
     int res = sceCtrlReadBufferPositiveOrig(pad_data, count);
 
     sample_input(pad_data, res, 0);
+    inject_udp_cross(pad_data, count, res);
 
-    pad_data[0].Buttons |= 0x4000;
+    pspSdkSetK1(k1);
+    return res;
+}
+
+int sceCtrlPeekBufferPositivePatched(SceCtrlData *pad_data, int count) {
+    int k1 = pspSdkSetK1(0);
+    int res = sceCtrlPeekBufferPositiveOrig(pad_data, count);
+
+    inject_udp_cross(pad_data, count, res);
 
     pspSdkSetK1(k1);
     return res;
@@ -509,12 +542,8 @@ void populate_car_analog_control_patched(u32 param_1, int *param_2, unsigned cha
         sample_input(&pad_data, res, 0);
     }
 
-    // UDP X button overrides local acceleration and supplies full throttle while held.
-    // sample_input() resets override_accel each frame, so X=0 releases it cleanly.
-    if (udp_x_pressed) {
-        override_accel = 1;
-        accel_override = 127;
-    }
+    // UDP X is injected as PSP_CTRL_CROSS by the controller API hooks below.
+    // Keep the digital button separate from the analog throttle override.
 
     // UDP steering takes priority while packets are arriving.
     // If steering packets stop for too long, immediately return steering to center.
@@ -721,6 +750,7 @@ int init() {
 
     if (is_emulator) {
         HIJACK_SYSCALL_STUB((u32)sceCtrlReadBufferPositive, sceCtrlReadBufferPositivePatched, sceCtrlReadBufferPositiveOrig);
+        HIJACK_SYSCALL_STUB((u32)sceCtrlPeekBufferPositive, sceCtrlPeekBufferPositivePatched, sceCtrlPeekBufferPositiveOrig);
     }
 
     if (is_emulator) {
