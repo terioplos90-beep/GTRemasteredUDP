@@ -114,15 +114,15 @@ if(*value_text == '.'){
 value = (float)whole + ((float)decimal / (float)decimal_div);  
 value *= (float)sign;  
 
-if(value < -67.0f){  
-    value = -67.0f;  
+if(value < -40.0f){  
+    value = -40.0f;  
 }  
 
-if(value > 67.0f){  
-    value = 67.0f;  
+if(value > 40.0f){  
+    value = 40.0f;  
 }  
 
-return (int)(value * 127.0f / 67.0f);
+return (int)(value * 127.0f / 40.0f);
 
 }
 
