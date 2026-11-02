@@ -694,7 +694,7 @@ return -1;
 if(is_emulator){
 adjacent_axes = 1;
 outer_deadzone = 124;
-inner_deadzone = 1;
+inner_deadzone = 0;
 }
 parse_config();
 
