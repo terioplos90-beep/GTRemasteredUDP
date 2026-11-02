@@ -576,10 +576,17 @@ if(override_accel || udp_x_pressed){
         accel_override, *throttle);
 }
 
-if(override_brake){
-param_3[0] = param_3[0] | 4;
-*brake = brake_override * 0x1000 / 127;
-LOG_VERBOSE("applying brake override, val is %d, brake is %d", brake_override, *brake);
+if(override_brake || udp_square_pressed){
+    param_3[0] |= 4;
+
+    if(udp_square_pressed){
+        *brake = 4096;
+    }else{
+        *brake = brake_override * 0x1000 / 127;
+    }
+
+    LOG_VERBOSE("applying brake, val is %d, brake is %d",
+        brake_override, *brake);
 }
 
 if(override_camera){
