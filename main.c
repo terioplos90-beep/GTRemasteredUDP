@@ -168,18 +168,21 @@ if(len >= UDP_BUF_SIZE){
     len = UDP_BUF_SIZE - 1;  
 }  
 
-buf[len] = '\0';  
-
-udp_steering_value = parse_udp_steering(buf);
+buf[len] = '\0';
 
 if(strncmp(buf, "X=1", 3) == 0){
-udp_x_pressed = 1;
+    udp_x_pressed = 1;
 }else if(strncmp(buf, "X=0", 3) == 0){
-udp_x_pressed = 0;
+    udp_x_pressed = 0;
+}else if(strncmp(buf, "SQUARE=1", 8) == 0){
+    udp_square_pressed = 1;
+}else if(strncmp(buf, "SQUARE=0", 8) == 0){
+    udp_square_pressed = 0;
+}else{
+    udp_steering_value = parse_udp_steering(buf);
+    udp_packet_valid = 1;
+    udp_packet_age = 0;
 }
-udp_packet_valid = 1;
-udp_packet_age = 0;
-
 if(packet_log_count < 10){  
     LOG("UDP PACKET RECEIVED: %s", buf);  
     LOG("UDP STEERING VALUE: %d", udp_steering_value);  
