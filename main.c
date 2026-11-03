@@ -516,7 +516,17 @@ int age = udp_packet_age;
 if(age <= UDP_TIMEOUT_FRAMES){
 param_3[0] = param_3[0] | 1;
 param_3[1] = param_3[1] | 2;
-*steering = udp_steering_value * 0x2000 / 127;
+int steering_value = udp_steering_value;
+
+if (steering_value > 0) {
+    steering_value += 4;
+    if (steering_value > 127) steering_value = 127;
+} else if (steering_value < 0) {
+    steering_value -= 4;
+    if (steering_value < -127) steering_value = -127;
+}
+
+*steering = steering_value * 0x2000 / 127;
 udp_packet_age = age + 1;
 LOG_VERBOSE("applying UDP steering, val is %d, steering is %d", udp_steering_value, *steering);
 }else{
