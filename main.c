@@ -170,7 +170,14 @@ if(len >= UDP_BUF_SIZE){
 
 buf[len] = '\0';
 
-if(strncmp(buf, "X=1", 3) == 0){
+if(strncmp(buf, "S=", 2) == 0){
+    int s = _atoi(buf + 2);
+    if(s > 127) s = 127;
+    if(s < -127) s = -127;
+    udp_steering_value = s;
+    udp_packet_valid = 1;
+    udp_packet_age = 0;
+}else if(strncmp(buf, "X=1", 3) == 0){
     udp_x_pressed = 1;
 }else if(strncmp(buf, "X=0", 3) == 0){
     udp_x_pressed = 0;
