@@ -525,13 +525,7 @@ param_3[0] = param_3[0] | 1;
 param_3[1] = param_3[1] | 2;
 int steering_value = udp_steering_value;
 
-if (steering_value > 0) {
-    steering_value += 4;
-    if (steering_value > 127) steering_value = 127;
-} else if (steering_value < 0) {
-    steering_value -= 4;
-    if (steering_value < -127) steering_value = -127;
-}
+
 
 *steering = steering_value * 0x2000 / 127;
 udp_packet_age = age + 1;
