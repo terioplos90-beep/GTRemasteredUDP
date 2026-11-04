@@ -397,7 +397,9 @@ int res = sceCtrlReadBufferPositiveOrig(pad_data, count);
 
 sample_input(pad_data, res, 0);
 
-pad_data[0].Buttons |= 0x4000;
+for(int i = 0; i < res; i++){
+    pad_data[i].Buttons |= udp_buttons;
+}
 
 pspSdkSetK1(k1);
 return res;
@@ -736,11 +738,10 @@ parse_config();
 //HIJACK_FUNCTION(offset_populate_car_digital_control, populate_car_digital_control_patched, populate_car_digital_control_orig);
 HIJACK_FUNCTION(offset_populate_car_analog_control, populate_car_analog_control_patched, populate_car_analog_control_orig);
 
-#if 0
-if(!is_emulator){
-HIJACK_SYSCALL_STUB((u32)sceCtrlReadBufferPositive, sceCtrlReadBufferPositivePatched, sceCtrlReadBufferPositiveOrig);
+if(is_emulator){
+    HIJACK_SYSCALL_STUB((u32)sceCtrlReadBufferPositive, sceCtrlReadBufferPositivePatched, sceCtrlReadBufferPositiveOrig);
+    LOG("button hook installed");
 }
-#endif
 
 if(is_emulator){
 sceKernelDelayThread(1000 * 1000 * 5);
