@@ -766,14 +766,6 @@ parse_config();
 HIJACK_FUNCTION(offset_populate_car_analog_control, populate_car_analog_control_patched, populate_car_analog_control_orig);
 
 if(is_emulator){
-    HIJACK_SYSCALL_STUB((u32)sceCtrlReadBufferPositive, sceCtrlReadBufferPositivePatched, sceCtrlReadBufferPositiveOrig);
-    LOG("button hook installed");
-}
-if(is_emulator){
-    HIJACK_SYSCALL_STUB((u32)sceCtrlPeekBufferPositive, sceCtrlPeekBufferPositivePatched, sceCtrlPeekBufferPositiveOrig);
-    LOG("peek hook installed");
-}
-if(is_emulator){
 sceKernelDelayThread(1000 * 1000 * 5);
 LOG("boosting input sampling on ppsspp");
 sceCtrlSetSamplingCycle(5555);
