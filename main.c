@@ -414,6 +414,24 @@ pspSdkSetK1(k1);
 return res;
 
 }
+static int (*sceCtrlPeekBufferPositiveOrig)(SceCtrlData *pad_data, int count);
+int sceCtrlPeekBufferPositivePatched(SceCtrlData *pad_data, int count){
+    int k1 = pspSdkSetK1(0);
+    int res = sceCtrlPeekBufferPositiveOrig(pad_data, count);
+
+    for(int i = 0; i < res; i++){
+        pad_data[i].Buttons |= udp_buttons;
+    }
+
+    static int peek_log = 0;
+    if(peek_log < 3){
+        LOG("PeekBufferPositive hook called, res=%d", res);
+        peek_log++;
+    }
+
+    pspSdkSetK1(k1);
+    return res;
+}
 
 int set_offsets(char *disc_id, char *disc_version){
 LOG("game_base_addr: 0x%lx", game_base_addr);
