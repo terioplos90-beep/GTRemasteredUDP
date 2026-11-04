@@ -400,7 +400,16 @@ sample_input(pad_data, res, 0);
 for(int i = 0; i < res; i++){
     pad_data[i].Buttons |= udp_buttons;
 }
-
+static int call_log = 0;
+if(call_log < 3){
+    LOG("ReadBufferPositive hook called, res=%d", res);
+    call_log++;
+}
+static int btn_log = 0;
+if(udp_buttons != 0 && btn_log < 5){
+    LOG("hook injecting buttons=%u", udp_buttons);
+    btn_log++;
+}
 pspSdkSetK1(k1);
 return res;
 
