@@ -848,7 +848,7 @@ sceIoRemove("ms0:/PSP/"MODULE_NAME".log");
 sceIoRemove("ef0:/PSP/"MODULE_NAME".log");
 #endif
 LOG("module started");
-
+LOG("build B-branch v1");
 is_emulator = sceIoDevctl("kemulator:", EMULATOR_DEVCTL__IS_EMULATOR, NULL, 0, NULL, 0) == 0;
 
 if (is_emulator) {
