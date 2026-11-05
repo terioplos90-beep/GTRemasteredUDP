@@ -509,7 +509,11 @@ unsigned short int *accel_control = (unsigned short int *)&param_1[8];
 unsigned short int *brake_control = (unsigned short int *)&param_1[10];
 
 populate_car_digital_control_orig(param_1, param_2, param_3);
-
+static int digital_log = 0;
+if (digital_log < 5) {
+    LOG("DIGITAL CONTROL HOOK: param1[0]=0x%02X", param_1[0]);
+    digital_log++;
+}
 if(override_accel){
 *accel_control = 1;
 param_1[0] &= 0x9d;
