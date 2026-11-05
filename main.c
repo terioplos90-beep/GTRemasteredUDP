@@ -72,6 +72,7 @@ static volatile int udp_packet_valid = 0;
 static volatile int udp_x_pressed = 0;
 static volatile unsigned int udp_buttons = 0;
 static volatile int udp_square_pressed = 0;
+static volatile int udp_o_pressed = 0;
 static volatile int udp_packet_age = UDP_TIMEOUT_FRAMES + 1;
 static SceUID udp_thread_id = -1;
 static int udp_socket = -1;
