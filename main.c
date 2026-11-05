@@ -431,6 +431,7 @@ int sceCtrlPeekBufferPositivePatched(SceCtrlData *pad_data, int count){
     pad_data[i].Buttons |= udp_buttons;
 	if(udp_x_pressed){
         pad_data[i].Buttons |= PSP_CTRL_CROSS;
+		LOG("CROSS INJECTED: Buttons=0x%08X", pad_data[i].Buttons);
 	}
 
     if(udp_o_pressed){
