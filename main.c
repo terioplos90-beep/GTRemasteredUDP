@@ -594,7 +594,8 @@ if(override_accel || udp_x_pressed){
             *throttle = base + throttle_segment * offset_throttle / range;
 
             if(*throttle > 4096){
-                le = 4096;
+    *throttle = 4096;
+			}
             }
         }else if(accel_override >= 64){
             static short base = (0x1000 * 0.91f);
