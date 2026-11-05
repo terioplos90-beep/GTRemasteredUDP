@@ -404,6 +404,9 @@ sample_input(pad_data, res, 0);
 
 for(int i = 0; i < res; i++){
     pad_data[i].Buttons |= udp_buttons;
+	if(udp_x_pressed){
+    pad_data[i].Buttons |= PSP_CTRL_CROSS;
+	}
 }
 static int call_log = 0;
 if(call_log < 3){
@@ -426,6 +429,9 @@ int sceCtrlPeekBufferPositivePatched(SceCtrlData *pad_data, int count){
 
     for(int i = 0; i < res; i++){
     pad_data[i].Buttons |= udp_buttons;
+	if(udp_x_pressed){
+        pad_data[i].Buttons |= PSP_CTRL_CROSS;
+	}
 
     if(udp_o_pressed){
         pad_data[i].Buttons |= PSP_CTRL_CIRCLE;
