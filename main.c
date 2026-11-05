@@ -584,49 +584,46 @@ LOG_VERBOSE("applying steering override, val is %d, steering is %d", steering_ov
 }
 
 
-if(override_accel || udp_x_pressed){
+if(override_accel){
     param_3[0] |= 2;
 
-    if(udp_x_pressed){
-        *throttle = 4096;
-    }else{
-        if(accel_override >= 95){
-            static short base = (0x1000 * 0.96f);
-            static short offset_throttle = (0x1000 * (1.0f - 0.96f) + 1);
-            int throttle_segment = accel_override - 95;
-            static int range = 127 - 95;
+    if(accel_override >= 95){
+        static short base = (0x1000 * 0.96f);
+        static short offset_throttle = (0x1000 * (1.0f - 0.96f) + 1);
+        int throttle_segment = accel_override - 95;
+        static int range = 127 - 95;
 
-            *throttle = base + throttle_segment * offset_throttle / range;
+        *throttle = base + throttle_segment * offset_throttle / range;
 
-            if(*throttle > 4096){
-                *throttle = 4096;
-            }
-        }else if(accel_override >= 64){
-            static short base = (0x1000 * 0.91f);
-            static short offset_throttle = (0x1000 * (0.96f - 0.91f));
-            int throttle_segment = accel_override - 64;
-            static int range = 94 - 64;
-
-            *throttle = base + throttle_segment * offset_throttle / range;
-        }else if(accel_override >= 32){
-            static short base = (0x1000 * 0.81f);
-            static short offset_throttle = (0x1000 * (0.91f - 0.81f));
-            int throttle_segment = accel_override - 32;
-            static int range = 63 - 32;
-
-            *throttle = base + throttle_segment * offset_throttle / range;
-        }else{
-            static short base = (0x1000 * 0.71f);
-            static short offset_throttle = (0x1000 * (0.81f - 0.71f));
-            int throttle_segment = accel_override;
-            static int range = 31;
-
-            *throttle = base + throttle_segment * offset_throttle / range;
+        if(*throttle > 4096){
+            *throttle = 4096;
         }
+    }else if(accel_override >= 64){
+        static short base = (0x1000 * 0.91f);
+        static short offset_throttle = (0x1000 * (0.96f - 0.91f));
+        int throttle_segment = accel_override - 64;
+        static int range = 94 - 64;
+
+        *throttle = base + throttle_segment * offset_throttle / range;
+    }else if(accel_override >= 32){
+        static short base = (0x1000 * 0.81f);
+        static short offset_throttle = (0x1000 * (0.91f - 0.81f));
+        int throttle_segment = accel_override - 32;
+        static int range = 63 - 32;
+
+        *throttle = base + throttle_segment * offset_throttle / range;
+    }else{
+        static short base = (0x1000 * 0.71f);
+        static short offset_throttle = (0x1000 * (0.81f - 0.71f));
+        int throttle_segment = accel_override;
+        static int range = 31;
+
+        *throttle = base + throttle_segment * offset_throttle / range;
     }
 
     LOG_VERBOSE("applying accel override, val is %d, throttle is %d",
         accel_override, *throttle);
+}
 }
 
 if(override_brake || udp_square_pressed){
