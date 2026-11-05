@@ -579,6 +579,7 @@ LOG_VERBOSE("applying steering override, val is %d, steering is %d", steering_ov
 *steering = 0;
 }
 
+
 if(override_accel || udp_x_pressed){
     param_3[0] |= 2;
 
@@ -594,8 +595,7 @@ if(override_accel || udp_x_pressed){
             *throttle = base + throttle_segment * offset_throttle / range;
 
             if(*throttle > 4096){
-    *throttle = 4096;
-			}
+                *throttle = 4096;
             }
         }else if(accel_override >= 64){
             static short base = (0x1000 * 0.91f);
@@ -620,6 +620,11 @@ if(override_accel || udp_x_pressed){
             *throttle = base + throttle_segment * offset_throttle / range;
         }
     }
+
+    LOG_VERBOSE("applying accel override, val is %d, throttle is %d",
+        accel_override, *throttle);
+}
+
 
     LOG_VERBOSE("applying accel override, val is %d, throttle is %d",
         accel_override, *throttle);
