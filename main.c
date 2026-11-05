@@ -547,7 +547,7 @@ sceCtrlSetSamplingMode(PSP_CTRL_MODE_ANALOG);
 return;
 }
 
-*throttif(is_emulator) {
+if(is_emulator) {
 SceCtrlData pad_data;
 int res = sceCtrlPeekBufferPositive(&pad_data, 1);
 sample_input(&pad_data, res, 0);
