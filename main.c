@@ -779,6 +779,9 @@ if(is_emulator){
 sceKernelDelayThread(1000 * 1000 * 5);
 LOG("boosting input sampling on ppsspp");
 sceCtrlSetSamplingCycle(5555);
+HIJACK_SYSCALL_STUB((u32)sceCtrlReadBufferPositive, sceCtrlReadBufferPositivePatched, sceCtrlReadBufferPositiveOrig);
+
+HIJACK_SYSCALL_STUB((u32)sceCtrlPeekBufferPositive, sceCtrlPeekBufferPositivePatched, sceCtrlPeekBufferPositiveOrig);
 }
 
 LOG("main thread finishes");
