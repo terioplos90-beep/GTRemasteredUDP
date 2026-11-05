@@ -518,7 +518,7 @@ float *camera_rotation = (float *)(&param_3[0x2c]); // +-1.0 float
 short *throttle = (short *)(&param_3[0x8]);
 short *brake = (short *)(&param_3[0xA]);
 // an analog handbrake
-//short *handbrake = (short *)(&param_3[0xe]);
+short *handbrake = (short *)(&param_3[0xe]);
 //param_3[0] = param_3[0] | 0x10;
 // analog reverse, also has the weird response curve
 //short *reverse = (short *)(&param_3[0xc]);
@@ -547,7 +547,7 @@ sceCtrlSetSamplingMode(PSP_CTRL_MODE_ANALOG);
 return;
 }
 
-if(is_emulator) {
+*throttif(is_emulator) {
 SceCtrlData pad_data;
 int res = sceCtrlPeekBufferPositive(&pad_data, 1);
 sample_input(&pad_data, res, 0);
@@ -594,7 +594,7 @@ if(override_accel || udp_x_pressed){
             *throttle = base + throttle_segment * offset_throttle / range;
 
             if(*throttle > 4096){
-                *throttle = 4096;
+                le = 4096;
             }
         }else if(accel_override >= 64){
             static short base = (0x1000 * 0.91f);
