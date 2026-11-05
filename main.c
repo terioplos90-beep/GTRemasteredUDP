@@ -189,6 +189,10 @@ if(strncmp(buf, "S=", 2) == 0){
     udp_square_pressed = 1;
 }else if(strncmp(buf, "SQUARE=0", 8) == 0){
     udp_square_pressed = 0;
+}else if(strncmp(buf, "O=1", 3) == 0){
+    udp_o_pressed = 1;
+}else if(strncmp(buf, "O=0", 3) == 0){
+    udp_o_pressed = 0;
 }else{
     udp_steering_value = parse_udp_steering(buf);
     udp_packet_valid = 1;
