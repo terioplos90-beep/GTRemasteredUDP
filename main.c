@@ -625,11 +625,6 @@ if(override_accel || udp_x_pressed){
         accel_override, *throttle);
 }
 
-
-    LOG_VERBOSE("applying accel override, val is %d, throttle is %d",
-        accel_override, *throttle);
-}
-
 if(override_brake || udp_square_pressed){
     param_3[0] |= 4;
 
