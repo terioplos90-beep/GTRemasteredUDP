@@ -425,8 +425,12 @@ int sceCtrlPeekBufferPositivePatched(SceCtrlData *pad_data, int count){
     int res = sceCtrlPeekBufferPositiveOrig(pad_data, count);
 
     for(int i = 0; i < res; i++){
-        pad_data[i].Buttons |= udp_buttons;
+    pad_data[i].Buttons |= udp_buttons;
+
+    if(udp_o_pressed){
+        pad_data[i].Buttons |= PSP_CTRL_CIRCLE;
     }
+	}
 
     static int peek_log = 0;
     if(peek_log < 3){
