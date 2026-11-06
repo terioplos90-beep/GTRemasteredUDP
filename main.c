@@ -46,7 +46,7 @@ static void udp_poll(void) {
 
     UdpInputPacket pkt;
     struct sockaddr_in client;
-    unsigned int len = sizeof(client);
+    socklen_t len = sizeof(client);
 
     int result = recvfrom(
         udp_socket,
