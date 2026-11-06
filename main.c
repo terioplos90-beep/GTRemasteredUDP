@@ -1,35 +1,26 @@
 
-/*
- * GTRemasteredUDP - Folax Cache Test
- * UDP Input + Game Button Cache
- */
-
-#include <pspctrl.h>
 #include <pspkernel.h>
-#include <pspsysmem.h>
+#include <pspctrl.h>
 #include <pspnet_inet.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
-#include <string.h>
 #include <stdint.h>
+#include <string.h>
 
 #include "hooking.h"
 #include "disc_ident.h"
 
 #define UDP_LISTEN_PORT 42069
 
-#define PSP_CTRL_CROSS  0x00000040
-#define PSP_CTRL_SQUARE 0x00000080
+/* Nilai tombol dipertahankan persis seperti source Folax. */
+#define PSP_CTRL_CROSS     0x00000040
+#define PSP_CTRL_SQUARE    0x00000080
 
-#define GAME_BUTTON_CACHE 0x08A12C00
-#define GAME_INPUT_BASE   0x08A00000
+#define GAME_BUTTON_CACHE  0x08A12C00
+#define GAME_INPUT_BASE    0x08A00000
 
 PSP_MODULE_INFO("GTRemasteredUDP", PSP_MODULE_KERNEL, 1, 0);
 PSP_MAIN_THREAD_ATTR(PSP_THREAD_ATTR_USER);
-
-static int udp_socket = -1;
-static SceUID udp_thread = -1;
-static volatile int udp_running = 0;
 
 typedef struct {
     int8_t tiltX;
@@ -38,7 +29,10 @@ typedef struct {
     int8_t brake;
 } UdpInputPacket;
 
-static volatile UdpInputPacket remote_input = {0};
+static int udp_socket = -1;
+static SceUID udp_thread = -1;
+static volatile int udp_running = 0;
+static UdpInputPacket remote_input = {0};
 
 static void udp_poll(void) {
     if (udp_socket < 0)
@@ -48,16 +42,16 @@ static void udp_poll(void) {
     struct sockaddr_in client;
     socklen_t len = sizeof(client);
 
-    int result = recvfrom(
+    int received = (int)sceNetInetRecvfrom(
         udp_socket,
         &pkt,
         sizeof(pkt),
-        0,
+        0x80, /* MSG_DONTWAIT */
         (struct sockaddr *)&client,
         &len
     );
 
-    if (result == sizeof(pkt)) {
+    if (received == (int)sizeof(UdpInputPacket)) {
         remote_input.tiltX = pkt.tiltX;
         remote_input.tiltY = pkt.tiltY;
         remote_input.gas = pkt.gas;
@@ -66,17 +60,15 @@ static void udp_poll(void) {
 }
 
 static void apply_controls(void) {
-    SceCtrlData *pad =
-        (SceCtrlData *)GAME_INPUT_BASE;
+    SceCtrlData *pad = (SceCtrlData *)GAME_INPUT_BASE;
 
-    pad->Lx = remote_input.tiltX + 128;
-    pad->Ly = remote_input.tiltY + 128;
+    pad->Lx = (unsigned char)(remote_input.tiltX + 128);
+    pad->Ly = (unsigned char)(remote_input.tiltY + 128);
 
     uint32_t game_buttons =
         *(volatile uint32_t *)GAME_BUTTON_CACHE;
 
-    game_buttons &=
-        ~(PSP_CTRL_SQUARE | PSP_CTRL_CROSS);
+    game_buttons &= ~(PSP_CTRL_SQUARE | PSP_CTRL_CROSS);
 
     if (remote_input.gas > 64)
         game_buttons |= PSP_CTRL_SQUARE;
@@ -84,13 +76,11 @@ static void apply_controls(void) {
     if (remote_input.brake < -64)
         game_buttons |= PSP_CTRL_CROSS;
 
-    *(volatile uint32_t *)GAME_BUTTON_CACHE =
-        game_buttons;
-
+    *(volatile uint32_t *)GAME_BUTTON_CACHE = game_buttons;
     pad->Buttons = game_buttons;
 }
 
-static int udp_thread_func(SceSize args, void *argp) {
+static int udp_thread_main(SceSize args, void *argp) {
     while (udp_running) {
         udp_poll();
         apply_controls();
@@ -101,27 +91,21 @@ static int udp_thread_func(SceSize args, void *argp) {
 }
 
 int module_start(SceSize args, void *argp) {
-    udp_socket = socket(
-        AF_INET,
-        SOCK_DGRAM,
-        IPPROTO_UDP
-    );
-
-    if (udp_socket < 0)
-        return -1;
-
     struct sockaddr_in server;
-    memset(&server, 0, sizeof(server));
 
+    memset(&server, 0, sizeof(server));
     server.sin_family = AF_INET;
     server.sin_port = htons(UDP_LISTEN_PORT);
     server.sin_addr.s_addr = INADDR_ANY;
 
-    if (bind(
-        udp_socket,
-        (struct sockaddr *)&server,
-        sizeof(server)
-    ) < 0) {
+    udp_socket = sceNetInetSocket(AF_INET, SOCK_DGRAM, 0);
+    if (udp_socket < 0)
+        return -1;
+
+    if (sceNetInetBind(
+            udp_socket,
+            (struct sockaddr *)&server,
+            sizeof(server)) < 0) {
         sceNetInetClose(udp_socket);
         udp_socket = -1;
         return -1;
@@ -131,7 +115,7 @@ int module_start(SceSize args, void *argp) {
 
     udp_thread = sceKernelCreateThread(
         "GTRemasteredUDP",
-        udp_thread_func,
+        udp_thread_main,
         0x18,
         0x1000,
         PSP_THREAD_ATTR_USER,
@@ -145,7 +129,14 @@ int module_start(SceSize args, void *argp) {
         return -1;
     }
 
-    sceKernelStartThread(udp_thread, 0, NULL);
+    if (sceKernelStartThread(udp_thread, 0, NULL) < 0) {
+        udp_running = 0;
+        sceKernelDeleteThread(udp_thread);
+        udp_thread = -1;
+        sceNetInetClose(udp_socket);
+        udp_socket = -1;
+        return -1;
+    }
 
     return 0;
 }
