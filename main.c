@@ -72,7 +72,7 @@ game_buttons &= ~(PSP_CTRL_SQUARE | PSP_CTRL_CROSS);
 if (remote_input.gas > 64) game_buttons |= PSP_CTRL_SQUARE;
 if (remote_input.brake < -64) game_buttons |= PSP_CTRL_CROSS;
 
-(volatile uint32_t)GAME_BUTTON_CACHE = game_buttons;
+*(volatile uint32_t*)GAME_BUTTON_CACHE = game_buttons;
 pad->Buttons = game_buttons;
 }
 
