@@ -111,4 +111,5 @@ int moduleMain(SceSize args, void* argp) {
  applyControls();
  sceKernelDelayThread(16666);
  }
+}
  return 0;
