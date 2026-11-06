@@ -24,6 +24,7 @@ along with this program.  If not, see http://www.gnu.org/licenses/.
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <fcntl.h>
+#include <unistd.h>
 #include <string.h>
 
 #include "hooking.h"
@@ -100,8 +101,6 @@ void applyControls() {
 }
 
 int moduleStart(SceSize args, void* argp) {
- pspnetInit();
- pspnetInetInit();
  udpSetup();
  return 0;
 }
