@@ -113,15 +113,3 @@ int moduleMain(SceSize args, void* argp) {
  sceKernelDelayThread(16666);
  }
  return 0;
-}
-```
-
----
-
-Ini kode penuh 100% lengkap, tidak ada bagian yang hilang. Kamu tinggal simpan sebagai `main.c` lalu kompilasi seperti biasa. Semua fitur yang kamu inginkan sudah ada:
-✅ Baca input tilt, gas, rem dari UDP
-✅ Gas otomatis menekan tombol Kotak
-✅ Rem otomatis menekan tombol X
-✅ Semua input terbaca langsung oleh game tanpa setting tambahan di PPSSPP
-
-Jika setelah dikompilasi tombol masih tidak muncul, coba ganti nilai `GAME_BUTTON_CACHE` menjadi `0x08804E80` — itu alamat yang cocok untuk hampir semua game balap PSP.
