@@ -1,3 +1,15 @@
+/*
+ * Remastered Controls: RemasteredControls_GTpsp
+ *
+ * Copyright (C) 2018, TheFloW
+ * Copyright (C) 2023, Katharine Chui
+ *
+ * UDP controller test modification:
+ * GTRemasteredUDP
+ *
+ * Original Folax control/cache approach is retained
+ * for testing. UDP input is received on port 42069.
+ */
 
 #include <pspkernel.h>
 #include <pspctrl.h>
@@ -12,10 +24,11 @@
 
 #define UDP_LISTEN_PORT 42069
 
-/* Nilai tombol dipertahankan persis seperti source Folax. */
+/* Nilai dari source Folax, belum diubah. */
 #define PSP_CTRL_CROSS     0x00000040
 #define PSP_CTRL_SQUARE    0x00000080
 
+/* Alamat dari source Folax, belum diverifikasi untuk UCES01245. */
 #define GAME_BUTTON_CACHE  0x08A12C00
 #define GAME_INPUT_BASE    0x08A00000
 
@@ -32,6 +45,7 @@ typedef struct {
 static int udp_socket = -1;
 static SceUID udp_thread = -1;
 static volatile int udp_running = 0;
+
 static UdpInputPacket remote_input = {0};
 
 static void udp_poll(void) {
@@ -42,11 +56,11 @@ static void udp_poll(void) {
     struct sockaddr_in client;
     socklen_t len = sizeof(client);
 
-    int received = (int)sceNetInetRecvfrom(
+    int received = sceNetInetRecvfrom(
         udp_socket,
         &pkt,
         sizeof(pkt),
-        0x80, /* MSG_DONTWAIT */
+        0x80,
         (struct sockaddr *)&client,
         &len
     );
@@ -84,6 +98,7 @@ static int udp_thread_main(SceSize args, void *argp) {
     while (udp_running) {
         udp_poll();
         apply_controls();
+
         sceKernelDelayThread(16666);
     }
 
@@ -94,11 +109,17 @@ int module_start(SceSize args, void *argp) {
     struct sockaddr_in server;
 
     memset(&server, 0, sizeof(server));
+
     server.sin_family = AF_INET;
     server.sin_port = htons(UDP_LISTEN_PORT);
     server.sin_addr.s_addr = INADDR_ANY;
 
-    udp_socket = sceNetInetSocket(AF_INET, SOCK_DGRAM, 0);
+    udp_socket = sceNetInetSocket(
+        AF_INET,
+        SOCK_DGRAM,
+        0
+    );
+
     if (udp_socket < 0)
         return -1;
 
@@ -106,6 +127,7 @@ int module_start(SceSize args, void *argp) {
             udp_socket,
             (struct sockaddr *)&server,
             sizeof(server)) < 0) {
+
         sceNetInetClose(udp_socket);
         udp_socket = -1;
         return -1;
@@ -129,12 +151,18 @@ int module_start(SceSize args, void *argp) {
         return -1;
     }
 
-    if (sceKernelStartThread(udp_thread, 0, NULL) < 0) {
+    if (sceKernelStartThread(
+            udp_thread,
+            0,
+            NULL) < 0) {
+
         udp_running = 0;
         sceKernelDeleteThread(udp_thread);
         udp_thread = -1;
+
         sceNetInetClose(udp_socket);
         udp_socket = -1;
+
         return -1;
     }
 
