@@ -380,20 +380,6 @@ LOG_VERBOSE("timestamp: %lu lx: %d ly: %d rx: %d ry: %d", timestamp, lx, ly, rx,
 
 }
 
-static int (*sceCtrlReadBufferPositiveOrig)(SceCtrlData *pad_data, int count);
-int sceCtrlReadBufferPositivePatched(SceCtrlData *pad_data, int count){
-int k1 = pspSdkSetK1(0);
-int res = sceCtrlReadBufferPositiveOrig(pad_data, count);
-
-sample_input(pad_data, res, 0);
-
-pad_data[0].Buttons |= 0x4000;
-
-pspSdkSetK1(k1);
-return res;
-
-}
-
 int set_offsets(char *disc_id, char *disc_version){
 LOG("game_base_addr: 0x%lx", game_base_addr);
 // EU and US v2.00
@@ -455,7 +441,7 @@ unsigned short int *brake_control = (unsigned short int *)&param_1[10];
 
 populate_car_digital_control_orig(param_1, param_2, param_3);
 
-if(override_accel){
+if(override_accel || udp_x_pressed){
 *accel_control = 1;
 param_1[0] &= 0x9d;
 }
@@ -531,12 +517,10 @@ LOG_VERBOSE("applying steering override, val is %d, steering is %d", steering_ov
 *steering = 0;
 }
 
-if(override_accel || udp_x_pressed){
+if(override_accel){
     param_3[0] |= 2;
 
-    if(udp_x_pressed){
-        *throttle = 4096;
-    }else{
+    {
         if(accel_override >= 95){
             static short base = (0x1000 * 0.96f);
             static short offset_throttle = (0x1000 * (1.0f - 0.96f) + 1);
@@ -719,14 +703,13 @@ inner_deadzone = 3;
 parse_config();
 
 //HIJACK_FUNCTION(offset_digital_to_analog, digital_to_analog_patched, digital_to_analog_orig);
-//HIJACK_FUNCTION(offset_populate_car_digital_control, populate_car_digital_control_patched, populate_car_digital_control_orig);
+if(offset_populate_car_digital_control != 0){
+HIJACK_FUNCTION(offset_populate_car_digital_control, populate_car_digital_control_patched, populate_car_digital_control_orig);
+}else{
+LOG("no digital control offset for this game version, UDP X disabled");
+}
 HIJACK_FUNCTION(offset_populate_car_analog_control, populate_car_analog_control_patched, populate_car_analog_control_orig);
 
-#if 0
-if(!is_emulator){
-HIJACK_SYSCALL_STUB((u32)sceCtrlReadBufferPositive, sceCtrlReadBufferPositivePatched, sceCtrlReadBufferPositiveOrig);
-}
-#endif
 
 if(is_emulator){
 sceKernelDelayThread(1000 * 1000 * 5);
