@@ -384,6 +384,49 @@ LOG_VERBOSE("timestamp: %lu lx: %d ly: %d rx: %d ry: %d", timestamp, lx, ly, rx,
 
 }
 
+// Digital X for the game itself (menus + race):
+// the game reads buttons with sceCtrlReadBufferPositive(buf, 1) through its OWN
+// import stub ("jr ra; syscall N"), so we patch that stub inside the game module.
+static u32 game_seg_addr[4];
+static u32 game_seg_size[4];
+static int game_seg_count = 0;
+
+static int (*game_ctrl_read_orig)(SceCtrlData *pad_data, int count);
+int game_ctrl_read_patched(SceCtrlData *pad_data, int count){
+int res = game_ctrl_read_orig(pad_data, count);
+if(udp_x_pressed && res > 0){
+for(int i = 0; i < res; i++){
+pad_data[i].Buttons |= PSP_CTRL_CROSS; // 0x4000
+}
+}
+return res;
+}
+
+static void hook_game_ctrl_read(void){
+u32 *own = (u32 *)sceCtrlReadBufferPositive;
+if(own[0] != 0x03e00008 || (own[1] & 0x3f) != 0x0c){
+LOG("unexpected import stub layout 0x%lx 0x%lx, not hooking", own[0], own[1]);
+return;
+}
+u32 syscall_op = own[1];
+LOG("looking for game stub with syscall op 0x%lx", syscall_op);
+
+for(int sgi = 0; sgi < game_seg_count; sgi++){
+u32 start = game_seg_addr[sgi] & ~3;
+u32 end = game_seg_addr[sgi] + game_seg_size[sgi];
+for(u32 addr = start; addr + 8 <= end; addr += 4){
+u32 *w = (u32 *)addr;
+if(w[0] == 0x03e00008 && w[1] == syscall_op){
+LOG("found game sceCtrlReadBufferPositive stub at 0x%lx", addr);
+HIJACK_FUNCTION(addr, game_ctrl_read_patched, game_ctrl_read_orig);
+LOG("game ctrl read hooked");
+return;
+}
+}
+}
+LOG("game sceCtrlReadBufferPositive stub not found");
+}
+
 int set_offsets(char *disc_id, char *disc_version){
 LOG("game_base_addr: 0x%lx", game_base_addr);
 // EU and US v2.00
@@ -725,6 +768,10 @@ parse_config();
 //HIJACK_FUNCTION(offset_populate_car_digital_control, populate_car_digital_control_patched, populate_car_digital_control_orig);
 HIJACK_FUNCTION(offset_populate_car_analog_control, populate_car_analog_control_patched, populate_car_analog_control_orig);
 
+if(is_emulator){
+hook_game_ctrl_read();
+}
+
 
 if(is_emulator){
 sceKernelDelayThread(1000 * 1000 * 5);
@@ -817,6 +864,14 @@ LOG("PPSSPP module %s", namebuf);
 if(strcmp(namebuf, GAME_MODULE_NAME) == 0){
 LOG("GTPSP module %s found", namebuf);
 game_base_addr = info.text_addr;
+game_seg_count = info.nsegment;
+if(game_seg_count > 4){
+game_seg_count = 4;
+}
+for(int k = 0; k < game_seg_count; k++){
+game_seg_addr[k] = info.segmentaddr[k];
+game_seg_size[k] = info.segmentsize[k];
+}
 }
 }
 if(game_base_addr != 0){
