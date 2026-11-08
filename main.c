@@ -72,6 +72,10 @@ static volatile int udp_packet_valid = 0;
 static volatile int udp_x_pressed = 0;
 static volatile int udp_square_pressed = 0;
 static volatile int udp_packet_age = UDP_TIMEOUT_FRAMES + 1;
+// UDP X is applied as a smooth "digital-like" throttle press
+#define UDP_X_START_THROTTLE 2908   // 0x1000 * 0.71
+#define UDP_X_RAMP_STEP 120         // per call; raise for faster ramp
+static int udp_x_throttle = 0;
 static SceUID udp_thread_id = -1;
 static int udp_socket = -1;
 
@@ -441,7 +445,7 @@ unsigned short int *brake_control = (unsigned short int *)&param_1[10];
 
 populate_car_digital_control_orig(param_1, param_2, param_3);
 
-if(override_accel || udp_x_pressed){
+if(override_accel){
 *accel_control = 1;
 param_1[0] &= 0x9d;
 }
@@ -515,6 +519,21 @@ param_3[1] = param_3[1] | 2;
 LOG_VERBOSE("applying steering override, val is %d, steering is %d", steering_override, *steering);
 }else{
 *steering = 0;
+}
+
+if(udp_x_pressed && !override_accel){
+    param_3[0] |= 2;
+    if(udp_x_throttle < UDP_X_START_THROTTLE){
+        udp_x_throttle = UDP_X_START_THROTTLE;
+    }else{
+        udp_x_throttle += UDP_X_RAMP_STEP;
+        if(udp_x_throttle > 4096){
+            udp_x_throttle = 4096;
+        }
+    }
+    *throttle = udp_x_throttle;
+}else if(!udp_x_pressed){
+    udp_x_throttle = 0;
 }
 
 if(override_accel){
@@ -703,11 +722,7 @@ inner_deadzone = 3;
 parse_config();
 
 //HIJACK_FUNCTION(offset_digital_to_analog, digital_to_analog_patched, digital_to_analog_orig);
-if(offset_populate_car_digital_control != 0){
-HIJACK_FUNCTION(offset_populate_car_digital_control, populate_car_digital_control_patched, populate_car_digital_control_orig);
-}else{
-LOG("no digital control offset for this game version, UDP X disabled");
-}
+//HIJACK_FUNCTION(offset_populate_car_digital_control, populate_car_digital_control_patched, populate_car_digital_control_orig);
 HIJACK_FUNCTION(offset_populate_car_analog_control, populate_car_analog_control_patched, populate_car_analog_control_orig);
 
 
