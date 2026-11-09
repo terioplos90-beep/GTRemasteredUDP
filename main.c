@@ -77,55 +77,82 @@ static int udp_socket = -1;
 
 int _atoi(char *buf);
 
+
 static int parse_udp_steering(char *buf){
-char *comma = strchr(buf, ',');
-char *value_text = (comma != NULL) ? comma + 1 : buf;
 
-float value = 0.0f;  
-int sign = 1;  
+    // Format baru dari Redmi: S=42 atau S=-127
+    if(strncmp(buf, "S=", 2) == 0){
 
-if(*value_text == '-'){  
-    sign = -1;  
-    value_text++;  
-}  
+        char *p = buf + 2;
+        int sign = 1;
+        int value = 0;
 
-int whole = 0;  
-int decimal = 0;  
-int decimal_div = 1;  
-int after_decimal = 0;  
+        if(*p == '-'){
+            sign = -1;
+            p++;
+        }
 
-while(*value_text >= '0' && *value_text <= '9'){  
-    whole = whole * 10 + (*value_text - '0');  
-    value_text++;  
-}  
+        if(*p < '0' || *p > '9'){
+            return 0;
+        }
 
-if(*value_text == '.'){  
-    value_text++;  
+        while(*p >= '0' && *p <= '9'){
+            value = value * 10 + (*p - '0');
+            p++;
+        }
 
-    while(*value_text >= '0' && *value_text <= '9'){  
-        if(after_decimal < 3){  
-            decimal = decimal * 10 + (*value_text - '0');  
-            decimal_div *= 10;  
-            after_decimal++;  
-        }  
-        value_text++;  
-    }  
-}  
+        value *= sign;
 
-value = (float)whole + ((float)decimal / (float)decimal_div);  
-value *= (float)sign;  
+        if(value > 127) value = 127;
+        if(value < -127) value = -127;
 
-if(value < -40.0f){  
-    value = -40.0f;  
-}  
+        return value;
+    }
 
-if(value > 40.0f){  
-    value = 40.0f;  
-}  
+    // Format lama tetap dipertahankan
+    char *comma = strchr(buf, ',');
+    char *value_text = (comma != NULL) ? comma + 1 : buf;
 
-return (int)(value * 127.0f / 40.0f);
+    float value = 0.0f;
+    int sign = 1;
 
+    if(*value_text == '-'){
+        sign = -1;
+        value_text++;
+    }
+
+    int whole = 0;
+    int decimal = 0;
+    int decimal_div = 1;
+    int after_decimal = 0;
+
+    while(*value_text >= '0' && *value_text <= '9'){
+        whole = whole * 10 + (*value_text - '0');
+        value_text++;
+    }
+
+    if(*value_text == '.'){
+        value_text++;
+
+        while(*value_text >= '0' && *value_text <= '9'){
+            if(after_decimal < 3){
+                decimal = decimal * 10 + (*value_text - '0');
+                decimal_div *= 10;
+                after_decimal++;
+            }
+            value_text++;
+        }
+    }
+
+    value = (float)whole + ((float)decimal / (float)decimal_div);
+    value *= (float)sign;
+
+    if(value < -40.0f) value = -40.0f;
+    if(value > 40.0f) value = 40.0f;
+
+    return (int)(value * 127.0f / 40.0f);
 }
+
 
 static int udp_steering_thread(SceSize args, void *argp){
 LOG("UDP THREAD ENTERED");
