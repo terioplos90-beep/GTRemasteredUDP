@@ -13,10 +13,10 @@ jobs:
       uses: actions/checkout@v3
 
       # install latest pspdev sdk
-    - name: Download PSP SDK
-      run: |
-        curl -sL https://github.com/pspdev/pspdev/releases/download/v20240701/pspdev-ubuntu-latest-x86_64.tar.gz | tar xvz -C ./
-
+    - name: Download PSPDEV
+  run: |
+    curl -fL -o pspdev.tar.gz https://github.com/pspdev/pspdev/releases/latest/download/pspdev-ubuntu-latest-x86_64.tar.gz
+    tar -xzf pspdev.tar.gz -C ./ 
     - name: Set env vars
       run: |
         echo "sha_name=$(echo ${GITHUB_SHA} | cut -c1-8)" >> $GITHUB_ENV
