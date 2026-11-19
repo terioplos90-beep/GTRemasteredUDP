@@ -198,9 +198,6 @@ buf[len] = '\0';
 
 if(strncmp(buf, "X=", 2) == 0){
     if(_atoi(buf + 2) != 0){
-        // Redmi ngirim X=127 / X=0 selang-seling cepet banget
-        // Jadi X=127 refresh hold, X=0 diabaikan aja
-        // Biar X nempel terus selama tombol ditahan
         udp_x_pressed = 1;
         udp_x_hold = 120;
     }
@@ -412,8 +409,8 @@ LOG_VERBOSE("timestamp: %lu lx: %d ly: %d rx: %d ry: %d", timestamp, lx, ly, rx,
 
 }
 
-// FIX: X digital di semua jalur baca tombol, biar jalan di menu + balapan
-// decrement = 1 cuma di Read, biar Peek gak ngabisin hold
+// FIX: X dari Redmi dikirim sebagai X + O barengan
+// UCES = Eropa, konfirmasi menu pakai O, bukan X
 static void apply_udp_x(SceCtrlData *pad_data, int count, int decrement){
     int pressed = udp_x_pressed;
     if(pressed && decrement){
@@ -424,9 +421,11 @@ static void apply_udp_x(SceCtrlData *pad_data, int count, int decrement){
     }
     for(int i = 0; i < count; i++){
         if(pressed){
-            pad_data[i].Buttons |= 0x4000; // CROSS (X) digital
+            pad_data[i].Buttons |= 0x4000; // CROSS (X)
+            pad_data[i].Buttons |= 0x2000; // CIRCLE (O) - konfirmasi EU
         } else {
             pad_data[i].Buttons &= ~0x4000;
+            pad_data[i].Buttons &= ~0x2000;
         }
     }
 }
@@ -439,8 +438,18 @@ static int (*sceCtrlPeekBufferNegativeOrig)(SceCtrlData *pad_data, int count);
 int sceCtrlReadBufferPositivePatched(SceCtrlData *pad_data, int count){
 int k1 = pspSdkSetK1(0);
 int res = sceCtrlReadBufferPositiveOrig(pad_data, count);
-sample_input(pad_data, res, 0);
-if(res > 0) apply_udp_x(pad_data, res, 1);
+if(res > 0){
+    static int logc = 0;
+    if(logc < 20){
+        LOG("PATCH READ+ called res=%d btn_before=0x%x udp_x=%d", res, pad_data[0].Buttons, udp_x_pressed);
+        logc++;
+    }
+    sample_input(pad_data, res, 0);
+    apply_udp_x(pad_data, res, 1);
+    if(logc <= 20){
+        LOG("PATCH READ+ after btn=0x%x", pad_data[0].Buttons);
+    }
+}
 pspSdkSetK1(k1);
 return res;
 }
@@ -448,7 +457,14 @@ return res;
 int sceCtrlPeekBufferPositivePatched(SceCtrlData *pad_data, int count){
 int k1 = pspSdkSetK1(0);
 int res = sceCtrlPeekBufferPositiveOrig(pad_data, count);
-if(res > 0) apply_udp_x(pad_data, res, 0);
+if(res > 0){
+    static int logc2 = 0;
+    if(logc2 < 20){
+        LOG("PATCH PEEK+ called res=%d btn_before=0x%x udp_x=%d", res, pad_data[0].Buttons, udp_x_pressed);
+        logc2++;
+    }
+    apply_udp_x(pad_data, res, 0);
+}
 pspSdkSetK1(k1);
 return res;
 }
