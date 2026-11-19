@@ -189,26 +189,32 @@ int len = sceNetInetRecvfrom(udp_socket, buf, UDP_BUF_SIZE - 1, 0,
 if(len > 0){
 static int packet_log_count = 0;
 
-if(len >= UDP_BUF_SIZE){  
-    len = UDP_BUF_SIZE - 1;  
-}  
+if(len >= UDP_BUF_SIZE){
+    len = UDP_BUF_SIZE - 1;
+}
 
 buf[len] = '\0';
 
-// EDIT BUAT TES: CUMA X DOANG, BOS
-if(strncmp(buf, "X=1", 3) == 0){
-    udp_x_pressed = 1;
-}else if(strncmp(buf, "X=0", 3) == 0){
-    udp_x_pressed = 0;
+if(strncmp(buf, "X=", 2) == 0){
+    // X DIGITAL: X=0 = lepas, X=apa aja >0 = kepencet
+    // Jadi X=1, X=64, X=127 semua jadi 1
+    udp_x_pressed = (_atoi(buf + 2) != 0) ? 1 : 0;
+}else if(strncmp(buf, "SQUARE=1", 8) == 0){
+    udp_square_pressed = 1;
+}else if(strncmp(buf, "SQUARE=0", 8) == 0){
+    udp_square_pressed = 0;
 }else{
-    // Square & Steering dibuang buat tes X aja
+    udp_steering_value = parse_udp_steering(buf);
+    udp_packet_valid = 1;
+    udp_packet_age = 0;
 }
-if(packet_log_count < 10){  
-    LOG("UDP PACKET RECEIVED: %s", buf);  
-    LOG("UDP X PRESSED: %d", udp_x_pressed);  
-    packet_log_count++;  
-  
-}		}
+if(packet_log_count < 10){
+    LOG("UDP PACKET RECEIVED: %s", buf);
+    LOG("UDP STEERING VALUE: %d", udp_steering_value);
+    packet_log_count++;
+
+}
+		}
 
 }
 
@@ -222,55 +228,55 @@ int net_res = sceNetInit(
 );
 LOG("sceNetInit result: %d", net_res);
 
-int inet_res = sceNetInetInit();  
-LOG("sceNetInetInit result: %d", inet_res);  
+int inet_res = sceNetInetInit();
+LOG("sceNetInetInit result: %d", inet_res);
 
-LOG("BEFORE UDP THREAD CREATE");  
+LOG("BEFORE UDP THREAD CREATE");
 
-udp_thread_id = sceKernelCreateThread(  
-    "GTRemasteredUDP",  
-    udp_steering_thread,  
-    0x18,  
-    0x4000,  
-    0,  
-    NULL  
-);  
+udp_thread_id = sceKernelCreateThread(
+    "GTRemasteredUDP",
+    udp_steering_thread,
+    0x18,
+    0x4000,
+    0,
+    NULL
+);
 
-if(udp_thread_id < 0){  
-    LOG("UDP thread create failed: %d", udp_thread_id);  
-    return;  
-}  
+if(udp_thread_id < 0){
+    LOG("UDP thread create failed: %d", udp_thread_id);
+    return;
+}
 
-LOG("UDP THREAD CREATED: %d", udp_thread_id);  
+LOG("UDP THREAD CREATED: %d", udp_thread_id);
 
-int start_res = sceKernelStartThread(  
-    udp_thread_id, 0, NULL  
-);  
+int start_res = sceKernelStartThread(
+    udp_thread_id, 0, NULL
+);
 
-LOG("UDP THREAD START RESULT: %d", start_res);  
+LOG("UDP THREAD START RESULT: %d", start_res);
 
-if(start_res < 0){  
-    LOG("UDP thread start failed: %d", start_res);  
-    return;  
-}  
+if(start_res < 0){
+    LOG("UDP thread start failed: %d", start_res);
+    return;
+}
 
-sceKernelDelayThread(10000);  
+sceKernelDelayThread(10000);
 
-SceKernelThreadInfo ti;  
-memset(&ti, 0, sizeof(ti));  
-ti.size = sizeof(ti);  
+SceKernelThreadInfo ti;
+memset(&ti, 0, sizeof(ti));
+ti.size = sizeof(ti);
 
-int status_res = sceKernelReferThreadStatus(  
-    udp_thread_id, &ti  
-);  
+int status_res = sceKernelReferThreadStatus(
+    udp_thread_id, &ti
+);
 
-LOG("THREAD STATUS RESULT: %d", status_res);  
+LOG("THREAD STATUS RESULT: %d", status_res);
 
-if(status_res >= 0){  
-    LOG("THREAD STATUS: %d", ti.status);  
-    LOG("THREAD PRIORITY: %d", ti.currentPriority);  
-    LOG("THREAD EXIT STATUS: %d", ti.exitStatus);  
-}  
+if(status_res >= 0){
+    LOG("THREAD STATUS: %d", ti.status);
+    LOG("THREAD PRIORITY: %d", ti.currentPriority);
+    LOG("THREAD EXIT STATUS: %d", ti.exitStatus);
+}
 
 LOG("UDP THREAD DIAGNOSTIC FINISHED");
 
@@ -332,11 +338,16 @@ if(ly < 128){
 lyn = apply_deadzone(128 - ly);
 }
 if(ly > 128){
-lyp = apply_deadzone(128 - 128);
+lyp = apply_deadzone(ly - 128);
 }
 if(rx < 128){
 rxn = apply_deadzone(128 - rx);
 }
+/*
+if(rx > 128){
+rxp = apply_deadzone(rx - 128);
+}
+*/
 if(ry < 128){
 ryn = apply_deadzone(128 - ry);
 }
@@ -371,9 +382,9 @@ override_brake = 1;
 brake_override = ryp;
 }
 
-if(ryn > 0){    
-	override_accel = 1;    
-	accel_override = ryn;    
+if(ryn > 0){
+	override_accel = 1;
+	accel_override = ryn;
 }
 
 }
@@ -384,9 +395,9 @@ override_camera = 1;
 camera_override = (float)(lyn * -1.5f) / 127.0f;
 }
 
-if(lyp > 0){    
-	override_camera = 1;    
-	camera_override = (float)(lyp * 1.5f) / 127.0f;    
+if(lyp > 0){
+	override_camera = 1;
+	camera_override = (float)(lyp * 1.5f) / 127.0f;
 }
 
 }
@@ -402,7 +413,13 @@ int res = sceCtrlReadBufferPositiveOrig(pad_data, count);
 
 sample_input(pad_data, res, 0);
 
-pad_data[0].Buttons |= 0x4000;
+// X DIGITAL doang - 0x4000 = CROSS (X), bukan gas
+// SQUARE tetep rem analog, tidak disentuh di sini
+if(udp_x_pressed){
+    pad_data[0].Buttons |= 0x4000;
+} else {
+    pad_data[0].Buttons &= ~0x4000;
+}
 
 pspSdkSetK1(k1);
 return res;
@@ -443,6 +460,8 @@ float *accel = (float *)((u32)(param_1[2]) + 0x530);
 u32 *accel_as_int = (u32 *)accel;
 float *brake = (float *)((u32)(param_1[2]) + 0x538);
 u32 *brake_as_int = (u32 *)brake;
+
+//LOG("accel at 0x%lx is %f, brake at 0x%lx is %f", (u32)accel, *accel, (u32)brake, *brake);
 
 digital_to_analog_orig(param_1, param_2);
 if(*accel_as_int != 0 && override_accel){
@@ -486,7 +505,16 @@ short *steering = (short *)(&param_3[4]); // +- 0x2000 int
 float *camera_rotation = (float *)(&param_3[0x2c]); // +-1.0 float
 short *throttle = (short *)(&param_3[0x8]);
 short *brake = (short *)(&param_3[0xA]);
+// an analog handbrake
+//short *handbrake = (short *)(&param_3[0xe]);
+//param_3[0] = param_3[0] | 0x10;
+// analog reverse, also has the weird response curve
+//short *reverse = (short *)(&param_3[0xc]);
+//param_3[0] = param_3[0] | 8;
 
+// no clutch..?
+
+// populate_car_analog_control_orig(param_1, param_2, param_3, param_4, param_5, param_6);
 param_3[0] = 0;
 param_3[1] = 0;
 
@@ -501,6 +529,7 @@ LOG("car control struct is now at 0x%lx", (uint32_t)param_3);
 int mode;
 sceCtrlGetSamplingMode(&mode);
 if(mode != PSP_CTRL_MODE_ANALOG){
+// the mode might be per thread
 LOG_VERBOSE("sceCtrlGetSamplingMode is not analog..? setting it to analog now");
 sceCtrlSetSamplingMode(PSP_CTRL_MODE_ANALOG);
 return;
@@ -534,13 +563,11 @@ LOG_VERBOSE("applying steering override, val is %d, steering is %d", steering_ov
 *steering = 0;
 }
 
-// EDIT BUAT TES: CUMA X DOANG, BOS - Square dibuang
-if(override_accel || udp_x_pressed){
+// X DIHAPUS DARI GAS - X sekarang digital via sceCtrlReadBufferPositivePatched
+if(override_accel){
     param_3[0] |= 2;
 
-    if(udp_x_pressed){
-        *throttle = 4096;
-    }else{
+    {
         if(accel_override >= 95){
             static short base = (0x1000 * 0.96f);
             static short offset_throttle = (0x1000 * (1.0f - 0.96f) + 1);
@@ -580,10 +607,16 @@ if(override_accel || udp_x_pressed){
         accel_override, *throttle);
 }
 
-// Square / Brake UDP dibuang buat tes X aja, biarin brake dari stik aja
-if(override_brake){
+// SQUARE TETAP REM ANALOG - tidak diubah
+if(override_brake || udp_square_pressed){
     param_3[0] |= 4;
-    *brake = brake_override * 0x1000 / 127;
+
+    if(udp_square_pressed){
+        *brake = 4096;
+    }else{
+        *brake = brake_override * 0x1000 / 127;
+    }
+
     LOG_VERBOSE("applying brake, val is %d, brake is %d",
         brake_override, *brake);
 }
@@ -685,8 +718,8 @@ LOG("overriding outer deadzone %d with %d", outer_deadzone, num);
 outer_deadzone = num;
 }
 
-arg_buf_write_head = 0;    
-	arg_idx++;    
+arg_buf_write_head = 0;
+	arg_idx++;
 }
 
 }
@@ -717,13 +750,12 @@ inner_deadzone = 3;
 }
 parse_config();
 
+//HIJACK_FUNCTION(offset_digital_to_analog, digital_to_analog_patched, digital_to_analog_orig);
+//HIJACK_FUNCTION(offset_populate_car_digital_control, populate_car_digital_control_patched, populate_car_digital_control_orig);
 HIJACK_FUNCTION(offset_populate_car_analog_control, populate_car_analog_control_patched, populate_car_analog_control_orig);
 
-#if 0
-if(!is_emulator){
+// Aktifkan biar tombol X digital masuk ke game
 HIJACK_SYSCALL_STUB((u32)sceCtrlReadBufferPositive, sceCtrlReadBufferPositivePatched, sceCtrlReadBufferPositiveOrig);
-}
-#endif
 
 if(is_emulator){
 sceKernelDelayThread(1000 * 1000 * 5);
@@ -814,7 +846,7 @@ char namebuf[sizeof(info.name) + 1] = {0};
 memcpy(namebuf, info.name, sizeof(info.name));
 LOG("PPSSPP module %s", namebuf);
 if(strcmp(namebuf, GAME_MODULE_NAME) == 0){
-LOG("PPSSPP module %s found", namebuf);
+LOG("GTPSP module %s found", namebuf);
 game_base_addr = info.text_addr;
 }
 }
@@ -835,6 +867,7 @@ LOG("module started");
 is_emulator = sceIoDevctl("kemulator:", EMULATOR_DEVCTL__IS_EMULATOR, NULL, 0, NULL, 0) == 0;
 
 if (is_emulator) {
+// Just scan the modules using normal/official syscalls.
 LOG("starting in ppsspp mode");
 start_udp_steering();
 StartPPSSPP();
