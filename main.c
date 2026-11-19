@@ -70,7 +70,6 @@ static int adjacent_axes = 0;
 static volatile int udp_steering_value = 0;
 static volatile int udp_packet_valid = 0;
 static volatile int udp_x_pressed = 0;
-static volatile int udp_x_value = 0;
 static volatile int udp_square_pressed = 0;
 static volatile int udp_packet_age = UDP_TIMEOUT_FRAMES + 1;
 static SceUID udp_thread_id = -1;
@@ -196,23 +195,17 @@ if(len >= UDP_BUF_SIZE){
 
 buf[len] = '\0';
 
-if(strncmp(buf, "X=", 2) == 0){
-    udp_x_value = _atoi(buf + 2);
-    if(udp_x_value < 0) udp_x_value = 0;
-    if(udp_x_value > 127) udp_x_value = 127;
-    udp_x_pressed = (udp_x_value > 0) ? 1 : 0;
-}else if(strncmp(buf, "SQUARE=1", 8) == 0){
-    udp_square_pressed = 1;
-}else if(strncmp(buf, "SQUARE=0", 8) == 0){
-    udp_square_pressed = 0;
+// EDIT BUAT TES: CUMA X DOANG, BOS
+if(strncmp(buf, "X=1", 3) == 0){
+    udp_x_pressed = 1;
+}else if(strncmp(buf, "X=0", 3) == 0){
+    udp_x_pressed = 0;
 }else{
-    udp_steering_value = parse_udp_steering(buf);
-    udp_packet_valid = 1;
-    udp_packet_age = 0;
+    // Square & Steering dibuang buat tes X aja
 }
 if(packet_log_count < 10){  
     LOG("UDP PACKET RECEIVED: %s", buf);  
-    LOG("UDP STEERING VALUE: %d", udp_steering_value);  
+    LOG("UDP X PRESSED: %d", udp_x_pressed);  
     packet_log_count++;  
   
 }		}
@@ -339,16 +332,11 @@ if(ly < 128){
 lyn = apply_deadzone(128 - ly);
 }
 if(ly > 128){
-lyp = apply_deadzone(ly - 128);
+lyp = apply_deadzone(128 - 128);
 }
 if(rx < 128){
 rxn = apply_deadzone(128 - rx);
 }
-/*
-if(rx > 128){
-rxp = apply_deadzone(rx - 128);
-}
-*/
 if(ry < 128){
 ryn = apply_deadzone(128 - ry);
 }
@@ -456,8 +444,6 @@ u32 *accel_as_int = (u32 *)accel;
 float *brake = (float *)((u32)(param_1[2]) + 0x538);
 u32 *brake_as_int = (u32 *)brake;
 
-//LOG("accel at 0x%lx is %f, brake at 0x%lx is %f", (u32)accel, *accel, (u32)brake, *brake);
-
 digital_to_analog_orig(param_1, param_2);
 if(*accel_as_int != 0 && override_accel){
 *accel = (float)accel_override / 127.0f;
@@ -500,16 +486,7 @@ short *steering = (short *)(&param_3[4]); // +- 0x2000 int
 float *camera_rotation = (float *)(&param_3[0x2c]); // +-1.0 float
 short *throttle = (short *)(&param_3[0x8]);
 short *brake = (short *)(&param_3[0xA]);
-// an analog handbrake
-//short *handbrake = (short *)(&param_3[0xe]);
-//param_3[0] = param_3[0] | 0x10;
-// analog reverse, also has the weird response curve
-//short *reverse = (short *)(&param_3[0xc]);
-//param_3[0] = param_3[0] | 8;
 
-// no clutch..?
-
-// populate_car_analog_control_orig(param_1, param_2, param_3, param_4, param_5, param_6);
 param_3[0] = 0;
 param_3[1] = 0;
 
@@ -524,7 +501,6 @@ LOG("car control struct is now at 0x%lx", (uint32_t)param_3);
 int mode;
 sceCtrlGetSamplingMode(&mode);
 if(mode != PSP_CTRL_MODE_ANALOG){
-// the mode might be per thread
 LOG_VERBOSE("sceCtrlGetSamplingMode is not analog..? setting it to analog now");
 sceCtrlSetSamplingMode(PSP_CTRL_MODE_ANALOG);
 return;
@@ -558,11 +534,12 @@ LOG_VERBOSE("applying steering override, val is %d, steering is %d", steering_ov
 *steering = 0;
 }
 
+// EDIT BUAT TES: CUMA X DOANG, BOS - Square dibuang
 if(override_accel || udp_x_pressed){
     param_3[0] |= 2;
 
     if(udp_x_pressed){
-        *throttle = udp_x_value * 4096 / 127;
+        *throttle = 4096;
     }else{
         if(accel_override >= 95){
             static short base = (0x1000 * 0.96f);
@@ -603,15 +580,10 @@ if(override_accel || udp_x_pressed){
         accel_override, *throttle);
 }
 
-if(override_brake || udp_square_pressed){
+// Square / Brake UDP dibuang buat tes X aja, biarin brake dari stik aja
+if(override_brake){
     param_3[0] |= 4;
-
-    if(udp_square_pressed){
-        *brake = 4096;
-    }else{
-        *brake = brake_override * 0x1000 / 127;
-    }
-
+    *brake = brake_override * 0x1000 / 127;
     LOG_VERBOSE("applying brake, val is %d, brake is %d",
         brake_override, *brake);
 }
@@ -745,8 +717,6 @@ inner_deadzone = 3;
 }
 parse_config();
 
-//HIJACK_FUNCTION(offset_digital_to_analog, digital_to_analog_patched, digital_to_analog_orig);
-//HIJACK_FUNCTION(offset_populate_car_digital_control, populate_car_digital_control_patched, populate_car_digital_control_orig);
 HIJACK_FUNCTION(offset_populate_car_analog_control, populate_car_analog_control_patched, populate_car_analog_control_orig);
 
 #if 0
@@ -844,7 +814,7 @@ char namebuf[sizeof(info.name) + 1] = {0};
 memcpy(namebuf, info.name, sizeof(info.name));
 LOG("PPSSPP module %s", namebuf);
 if(strcmp(namebuf, GAME_MODULE_NAME) == 0){
-LOG("GTPSP module %s found", namebuf);
+LOG("PPSSPP module %s found", namebuf);
 game_base_addr = info.text_addr;
 }
 }
@@ -865,7 +835,6 @@ LOG("module started");
 is_emulator = sceIoDevctl("kemulator:", EMULATOR_DEVCTL__IS_EMULATOR, NULL, 0, NULL, 0) == 0;
 
 if (is_emulator) {
-// Just scan the modules using normal/official syscalls.
 LOG("starting in ppsspp mode");
 start_udp_steering();
 StartPPSSPP();
