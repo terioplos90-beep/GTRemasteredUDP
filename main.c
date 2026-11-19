@@ -70,13 +70,13 @@ static int adjacent_axes = 0;
 static volatile int udp_steering_value = 0;
 static volatile int udp_packet_valid = 0;
 static volatile int udp_x_pressed = 0;
+static volatile int udp_x_value = 0;
 static volatile int udp_square_pressed = 0;
 static volatile int udp_packet_age = UDP_TIMEOUT_FRAMES + 1;
 static SceUID udp_thread_id = -1;
 static int udp_socket = -1;
 
 int _atoi(char *buf);
-
 
 static int parse_udp_steering(char *buf){
 
@@ -153,7 +153,6 @@ static int parse_udp_steering(char *buf){
     return (int)(value * 127.0f / 40.0f);
 }
 
-
 static int udp_steering_thread(SceSize args, void *argp){
 LOG("UDP THREAD ENTERED");
 struct sockaddr_in addr;
@@ -197,10 +196,11 @@ if(len >= UDP_BUF_SIZE){
 
 buf[len] = '\0';
 
-if(strncmp(buf, "X=1", 3) == 0){
-    udp_x_pressed = 1;
-}else if(strncmp(buf, "X=0", 3) == 0){
-    udp_x_pressed = 0;
+if(strncmp(buf, "X=", 2) == 0){
+    udp_x_value = _atoi(buf + 2);
+    if(udp_x_value < 0) udp_x_value = 0;
+    if(udp_x_value > 127) udp_x_value = 127;
+    udp_x_pressed = (udp_x_value > 0) ? 1 : 0;
 }else if(strncmp(buf, "SQUARE=1", 8) == 0){
     udp_square_pressed = 1;
 }else if(strncmp(buf, "SQUARE=0", 8) == 0){
@@ -562,7 +562,7 @@ if(override_accel || udp_x_pressed){
     param_3[0] |= 2;
 
     if(udp_x_pressed){
-        *throttle = 4096;
+        *throttle = udp_x_value * 4096 / 127;
     }else{
         if(accel_override >= 95){
             static short base = (0x1000 * 0.96f);
