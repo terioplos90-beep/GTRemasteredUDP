@@ -72,40 +72,50 @@ u32 offset_populate_car_analog_control = 0;
 	} \
 	LOG("original instructions: 0x%lx 0x%lx", _lw((u32)_pattern), _lw((u32)_pattern + 4)); \
 	if(is_emulator){ \
-		SceUID _modules[32]; \
-		SceKernelModuleInfo _info; \
-		int _i, _count = 0; \
-		if (sceKernelGetModuleIdList(_modules, sizeof(_modules), &_count) >= 0) { \
-			for (_i = 0; _i < _count; _i++) { \
-				_info.size = sizeof(SceKernelModuleInfo); \
-				if (sceKernelQueryModuleInfo(_modules[_i], &_info) < 0) continue; \
-				if (strcmp(_info.name, MODULE_NAME) == 0) continue; \
-				if (strcmp(_info.name, GAME_MODULE_NAME) != 0) continue; \
-				u32 _seg_addr = _info.segmentaddr[1]; \
-				u32 _seg_size = _info.segmentsize[1]; \
-				LOG("DUMP segment1 addr 0x%x size 0x%x", _seg_addr, _seg_size); \
-				u32 _j; \
-				for(_j = 0; _j < _seg_size && _j < 0x2000; _j+=8){ \
-					u32 _addr = _seg_addr + _j; \
-					u32 _w0 = _lw(_addr); \
-					u32 _w1 = _lw(_addr+4); \
-					if((_w0 & 0xFC000000) == 0x08000000){ \
-						u32 _target = 0x80000000 | ((_w0 & 0x03FFFFFF) << 2); \
-						LOG("STUB at 0x%x: J 0x%x NOP 0x%x", _addr, _target, _w1); \
-					} \
-				} \
-				u32 _seg0 = _info.segmentaddr[0]; \
-				u32 _size0 = _info.segmentsize[0]; \
-				for(_j = 0; _j < _size0; _j+=4){ \
-					u32 _addr = _seg0 + _j; \
-					if(_lw(_addr) == 0x3A622550){ \
-						LOG("FOUND NID sceCtrlPeekBufferPositive 0x3A622550 at 0x%x", _addr); \
-						int _k; \
-						for(_k = -8; _k < 32; _k++){ \
-							LOG("NID dump [%d] 0x%x = 0x%x", _k, _addr + _k*4, _lw(_addr + _k*4)); \
+		static int _dumped = 0; \
+		if(!_dumped){ \
+			_dumped = 1; \
+			SceUID _modules[32]; \
+			SceKernelModuleInfo _info; \
+			int _i, _count = 0; \
+			if (sceKernelGetModuleIdList(_modules, sizeof(_modules), &_count) >= 0) { \
+				for (_i = 0; _i < _count; _i++) { \
+					_info.size = sizeof(SceKernelModuleInfo); \
+					if (sceKernelQueryModuleInfo(_modules[_i], &_info) < 0) continue; \
+					if (strcmp(_info.name, GAME_MODULE_NAME) != 0) continue; \
+					LOG("GAME seg0 0x%x size 0x%x seg1 0x%x size 0x%x", _info.segmentaddr[0], _info.segmentsize[0], _info.segmentaddr[1], _info.segmentsize[1]); \
+					u32 _seg0 = _info.segmentaddr[0]; \
+					u32 _size0 = _info.segmentsize[0]; \
+					u32 _start = _seg0 + _size0 - 0x8000; \
+					int _found = 0; \
+					u32 _j; \
+					for(_j = 0; _j < 0x8000 && _found < 20; _j+=8){ \
+						u32 _addr = _start + _j; \
+						u32 _w0 = _lw(_addr); \
+						u32 _w1 = _lw(_addr+4); \
+						if((_w0 & 0xFC000000) == 0x08000000 && _w1 == 0){ \
+							u32 _target = 0x80000000 | ((_w0 & 0x03FFFFFF) << 2); \
+							if(_target >= 0x83200000 && _target < 0x83400000){ \
+								LOG("STUB %d at 0x%x -> 0x%x", _found, _addr, _target); \
+								_found++; \
+							} \
 						} \
-						break; \
 					} \
+					LOG("STUB total first20 done, found=%d", _found); \
+					u32 _seg; \
+					for(_seg = 0; _seg < 3; _seg++){ \
+						u32 _a = _info.segmentaddr[_seg]; \
+						u32 _s = _info.segmentsize[_seg]; \
+						if(_a == 0 || _s == 0) continue; \
+						for(_j = 0; _j < _s; _j+=4){ \
+							u32 _addr = _a + _j; \
+							u32 _v = _lw(_addr); \
+							if(_v == 0x3A622550 || _v == 0x1F803E09 || _v == 0x60E4E2EB || _v == 0xC152080A){ \
+								LOG("FOUND NID 0x%x at 0x%x seg %ld", _v, _addr, _seg); \
+							} \
+						} \
+					} \
+					LOG("NID scan done"); \
 				} \
 			} \
 		} \
