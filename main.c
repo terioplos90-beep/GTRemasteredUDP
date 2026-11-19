@@ -197,7 +197,6 @@ buf[len] = '\0';
 
 if(strncmp(buf, "X=", 2) == 0){
     // X DIGITAL: X=0 = lepas, X=apa aja >0 = kepencet
-    // Jadi X=1, X=64, X=127 semua jadi 1
     udp_x_pressed = (_atoi(buf + 2) != 0) ? 1 : 0;
 }else if(strncmp(buf, "SQUARE=1", 8) == 0){
     udp_square_pressed = 1;
@@ -406,24 +405,53 @@ LOG_VERBOSE("timestamp: %lu lx: %d ly: %d rx: %d ry: %d", timestamp, lx, ly, rx,
 
 }
 
+// FIX: X digital di semua jalur baca tombol, biar jalan di menu + balapan
+static void apply_udp_x(SceCtrlData *pad_data, int count){
+    for(int i = 0; i < count; i++){
+        if(udp_x_pressed){
+            pad_data[i].Buttons |= 0x4000; // CROSS (X) digital
+        } else {
+            pad_data[i].Buttons &= ~0x4000;
+        }
+    }
+}
+
 static int (*sceCtrlReadBufferPositiveOrig)(SceCtrlData *pad_data, int count);
+static int (*sceCtrlPeekBufferPositiveOrig)(SceCtrlData *pad_data, int count);
+static int (*sceCtrlReadBufferNegativeOrig)(SceCtrlData *pad_data, int count);
+static int (*sceCtrlPeekBufferNegativeOrig)(SceCtrlData *pad_data, int count);
+
 int sceCtrlReadBufferPositivePatched(SceCtrlData *pad_data, int count){
 int k1 = pspSdkSetK1(0);
 int res = sceCtrlReadBufferPositiveOrig(pad_data, count);
-
 sample_input(pad_data, res, 0);
-
-// X DIGITAL doang - 0x4000 = CROSS (X), bukan gas
-// SQUARE tetep rem analog, tidak disentuh di sini
-if(udp_x_pressed){
-    pad_data[0].Buttons |= 0x4000;
-} else {
-    pad_data[0].Buttons &= ~0x4000;
-}
-
+if(res > 0) apply_udp_x(pad_data, res);
 pspSdkSetK1(k1);
 return res;
+}
 
+int sceCtrlPeekBufferPositivePatched(SceCtrlData *pad_data, int count){
+int k1 = pspSdkSetK1(0);
+int res = sceCtrlPeekBufferPositiveOrig(pad_data, count);
+if(res > 0) apply_udp_x(pad_data, res);
+pspSdkSetK1(k1);
+return res;
+}
+
+int sceCtrlReadBufferNegativePatched(SceCtrlData *pad_data, int count){
+int k1 = pspSdkSetK1(0);
+int res = sceCtrlReadBufferNegativeOrig(pad_data, count);
+if(res > 0) apply_udp_x(pad_data, res);
+pspSdkSetK1(k1);
+return res;
+}
+
+int sceCtrlPeekBufferNegativePatched(SceCtrlData *pad_data, int count){
+int k1 = pspSdkSetK1(0);
+int res = sceCtrlPeekBufferNegativeOrig(pad_data, count);
+if(res > 0) apply_udp_x(pad_data, res);
+pspSdkSetK1(k1);
+return res;
 }
 
 int set_offsets(char *disc_id, char *disc_version){
@@ -754,8 +782,11 @@ parse_config();
 //HIJACK_FUNCTION(offset_populate_car_digital_control, populate_car_digital_control_patched, populate_car_digital_control_orig);
 HIJACK_FUNCTION(offset_populate_car_analog_control, populate_car_analog_control_patched, populate_car_analog_control_orig);
 
-// Aktifkan biar tombol X digital masuk ke game
+// Aktifkan biar tombol X digital masuk ke game - semua jalur baca tombol
 HIJACK_SYSCALL_STUB((u32)sceCtrlReadBufferPositive, sceCtrlReadBufferPositivePatched, sceCtrlReadBufferPositiveOrig);
+HIJACK_SYSCALL_STUB((u32)sceCtrlPeekBufferPositive, sceCtrlPeekBufferPositivePatched, sceCtrlPeekBufferPositiveOrig);
+HIJACK_SYSCALL_STUB((u32)sceCtrlReadBufferNegative, sceCtrlReadBufferNegativePatched, sceCtrlReadBufferNegativeOrig);
+HIJACK_SYSCALL_STUB((u32)sceCtrlPeekBufferNegative, sceCtrlPeekBufferNegativePatched, sceCtrlPeekBufferNegativeOrig);
 
 if(is_emulator){
 sceKernelDelayThread(1000 * 1000 * 5);
